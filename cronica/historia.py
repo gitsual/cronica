@@ -169,3 +169,60 @@ def cifras_git(repo: Path, sha: str) -> dict[str, int]:
         "commits": int(git(repo, "rev-list", "--count", sha).strip()),
         "autores": len([a for a in autores if a.strip()]),
     }
+
+
+def _blobs(repo: Path, sha: str) -> dict[str, str]:
+    """{ruta: blob} del árbol de un commit."""
+    salida = {}
+    for linea in git(repo, "ls-tree", "-r", sha).splitlines():
+        meta, ruta = linea.split("	", 1)
+        partes = meta.split()
+        if len(partes) == 3 and partes[1] == "blob":
+            salida[ruta] = partes[2]
+    return salida
+
+
+def _lineas_blobs(repo: Path, blobs: list[str]) -> int:
+    """Líneas de texto de una lista de blobs (los binarios no cuentan), con un solo git cat-file."""
+    if not blobs:
+        return 0
+    r = subprocess.run(["git", "-C", str(repo), "cat-file", "--batch"], input=("\n".join(blobs) + "\n").encode(),
+                       capture_output=True)
+    total, datos, i = 0, r.stdout, 0
+    while i < len(datos):
+        fin = datos.index(b"\n", i)
+        cab = datos[i:fin].split()
+        if len(cab) < 3:
+            break
+        n = int(cab[2])
+        cuerpo = datos[fin + 1: fin + 1 + n]
+        if b"\0" not in cuerpo[:8000]:
+            total += cuerpo.count(b"\n")
+        i = fin + 1 + n + 1
+    return total
+
+
+def extraccion(repo_a: Path, sha_a: str, repo_b: Path, sha_b: str) -> dict:
+    """Qué se muda de A a B: los ficheros del primer commit de B que ya estaban, idénticos, en A.
+
+    Se comparan por contenido (blob), así que da igual que cambien de carpeta al mudarse.
+    """
+    a, b = _blobs(repo_a, sha_a), _blobs(repo_b, sha_b)
+    en_a = {}
+    for ruta, blob in a.items():
+        en_a.setdefault(blob, ruta)
+    mudan = [(en_a[blob], ruta) for ruta, blob in b.items() if blob in en_a]
+    origen = [o for o, _ in mudan]
+    carpetas: dict[str, int] = {}
+    for o in origen:
+        partes = o.split("/")
+        clave = "/".join(partes[:2]) if len(partes) > 2 else (partes[0] if len(partes) > 1 else "(raíz)")
+        carpetas[clave] = carpetas.get(clave, 0) + 1
+    paso = max(1, len(origen) // 36)
+    return {
+        "ficheros": len(mudan), "ficheros_b": len(b),
+        "lineas_mudan": _lineas_blobs(repo_b, [b[d] for _, d in mudan]),
+        "lineas_a": cifras_git(repo_a, sha_a)["lineas"], "lineas_b": cifras_git(repo_b, sha_b)["lineas"],
+        "carpetas": sorted(carpetas.items(), key=lambda x: -x[1])[:6],
+        "muestra": sorted(origen)[::paso][:36],
+    }

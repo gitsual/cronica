@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from importlib import resources
@@ -9,7 +10,7 @@ from pathlib import Path
 
 from .servidor import Servidor
 
-INTRO_MS, OUTRO_MS = 2200, 5200
+INTRO_MS, OUTRO_MS, EXTRACCION_MS = 2200, 5200, 7500
 FPS_CLIP = 30  # los clips se graban a pasos; cada fotograma vale 1/30 s
 
 CIFRAS = {
@@ -22,36 +23,50 @@ CIFRAS["estatico"] = CIFRAS["web"]
 DOCS = ("foundation", "intro", "welcome")
 
 
-def preparar(video: Path, trabajo: Path, proyecto: str, tipo: str, hitos: list[dict], textos: dict) -> dict:
-    """hitos: [{nn, sha, fecha, chip, titulo, cifras, fotos}] con clip grabado, en orden.
+def _rel(destino: Path, desde: Path) -> str:
+    return os.path.relpath(destino, desde).replace(os.sep, "/")
 
-    El reproductor vive en trabajo/video/ y lee fotos y clips de trabajo/hitos/ (no se copia nada).
+
+def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos: dict) -> dict:
+    """escenas: hitos ya grabados ({nn, sha, fecha, chip, titulo, cifras, fotos, dir, cap, barra}) y escenas
+    especiales ({tipo: "extraccion", ...}), en orden.
+
+    El reproductor vive en video/ y lee fotos y clips de la carpeta de trabajo de cada repositorio (no se copia
+    nada): las rutas son relativas a video/ y el servidor sirve el antepasado común.
     """
     video.mkdir(parents=True, exist_ok=True)
-    salida, t = [], INTRO_MS
-    for h in hitos:
-        rel = f"../hitos/{h['sha'][:12]}"
+    salida, t, cifras_previas = [], INTRO_MS, {}
+    for h in escenas:
+        if h.get("tipo") == "extraccion":
+            dur = h.get("dur", EXTRACCION_MS)
+            salida.append({**h, "rotulo": textos["rotulos"].get(h["nn"], h["titulo"]), "cifras": cifras_previas,
+                           "inicio": t, "dur": dur, "fichas": [], "nuevas": [], "cambiadas": [], "fotogramas": 0})
+            t += dur
+            continue
+        rel = _rel(Path(h["dir"]) / "hitos" / h["sha"][:12], video) if h.get("sha") else _rel(Path(h["dir"]), video)
         f = h["fotos"]
         nombres = {x["key"]: x["nombre"] for x in f["fichas"]} | {"__marco__": "Storybook" if tipo == "storybook" else "Marco"}
         fichas = []
         for ficha in f["fichas"]:
-            item = {"key": ficha["key"], "nombre": ficha["nombre"], "w": ficha["light"]["w"], "h": ficha["light"]["h"],
-                    "cubre": tipo != "storybook"}
+            item = {"key": f"{h['cap']}:{ficha['key']}", "nombre": ficha["nombre"], "w": ficha["light"]["w"],
+                    "h": ficha["light"]["h"], "cubre": tipo != "storybook"}
             for tema in ("light", "dark"):
                 if ficha.get(tema):
                     item[tema] = f"{rel}/{ficha[tema]['file']}"
             fichas.append(item)
         visibles = [x for x in fichas if not any(p in x["key"].lower() for p in DOCS)]
         cifras = {**h["cifras"], "componentes": len(visibles), "pantallas": len(fichas), "stories": f.get("stories", 0)}
+        cifras_previas = cifras
         dur = round(f["fotogramas"] * 1000 / FPS_CLIP)
-        salida.append({"nn": h["nn"], "sha": h["sha"][:7], "fecha": h["fecha"], "chip": h["chip"],
-                       "rotulo": textos["rotulos"].get(h["nn"], h["titulo"]), "cifras": cifras,
-                       "clip": f"{rel}/clip/", "fotogramas": f["fotogramas"], "inicio": t, "dur": dur,
+        salida.append({"nn": h["nn"], "sha": (h.get("sha") or "")[:7], "fecha": h["fecha"], "chip": h["chip"],
+                       "rotulo": textos["rotulos"].get(h["nn"], h["titulo"]), "cifras": cifras, "cap": h["cap"],
+                       "barra": h["barra"],
+                       "clip": f"{_rel(Path(h['dir_clip']), video)}/clip/" if h.get("dir_clip") else f"{rel}/clip/", "fotogramas": f["fotogramas"], "inicio": t, "dur": dur,
                        "nuevas": [nombres[k] for k in f.get("nuevas", []) if k in nombres],
                        "cambiadas": [nombres[k] for k in f.get("cambiadas", []) if k in nombres],
                        "fichas": fichas})
         t += dur
-    ultimo = salida[-1]["cifras"] if salida else {}
+    ultimo = next((e["cifras"] for e in reversed(salida) if e["cifras"]), {})
     definicion = [[k, l] for k, l in CIFRAS[tipo] if ultimo.get(k)]
     datos = {
         "proyecto": proyecto, "titulo": textos.get("titulo") or proyecto, "cierre": textos.get("cierre") or "",
@@ -69,9 +84,12 @@ def duracion_ms(datos: dict) -> int:
 
 
 def _abrir(navegador, video: Path):
-    srv = Servidor(video.parent)
+    datos = json.loads((video / "datos.json").read_text(encoding="utf-8"))
+    rutas = [video] + [(video / h["clip"]).resolve() for h in datos["hitos"] if h.get("clip")]
+    raiz = Path(os.path.commonpath([str(r.resolve()) for r in rutas]))
+    srv = Servidor(raiz)
     page = navegador.new_page(viewport={"width": 1920, "height": 1080})
-    page.goto(f"{srv.url}/{video.name}/reproductor.html")
+    page.goto(f"{srv.url}/{_rel(video.resolve(), raiz)}/reproductor.html")
     page.wait_for_function("window.ready === true", timeout=180_000)
     return srv, page
 

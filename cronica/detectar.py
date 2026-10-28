@@ -34,6 +34,7 @@ class Receta:
     construir: list[list[str]] = field(default_factory=list)   # intentos, en orden
     salidas: list[str] = field(default_factory=list)            # dónde buscar el resultado (relativas a la raíz)
     dev: list[str] | None = None    # servidor de desarrollo, para web sin build estático
+    preparar: list[str] | None = None  # orden extra entre instalar y construir (--preparar)
 
     def a_dict(self) -> dict:
         return self.__dict__.copy()

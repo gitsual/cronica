@@ -248,8 +248,9 @@ def _focos(tipo: str, fotos_hito: dict, nuevas: list[str], cambiadas: list[str],
     return orden[:MAX_FOCOS]
 
 
-def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, Path], max_fotogramas: int) -> dict | None:
-    """Fotografía las fichas, compara con lo ya enseñado y, si algo cambia, graba la app en uso."""
+def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, Path], max_fotogramas: int,
+           forzar: bool = False) -> dict | None:
+    """Fotografía las fichas, compara con lo ya enseñado y, si algo cambia (o forzar), graba la app en uso."""
     primero = not previas
     datos = fotos.storybook(navegador, base, dir_hito) if tipo == "storybook" else fotos.web(navegador, base, dir_hito)
     if not datos or not datos.get("fichas"):
@@ -258,7 +259,7 @@ def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, P
     marco, marco_antes = dir_hito / "marco.png", previas.get(cambios.MARCO)
     if marco.exists() and marco_antes and marco_antes.exists() and cambios.distinta(marco_antes, marco, cambios.UMBRAL_MARCO):
         cambiadas.append(cambios.MARCO)
-    datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not nuevas and not cambiadas)
+    datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not forzar and not nuevas and not cambiadas)
     if datos["sin_cambios"]:
         return datos
     claves = _focos(tipo, datos, [k for k in nuevas], [k for k in cambiadas if k != cambios.MARCO], primero)
@@ -280,11 +281,12 @@ def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, P
     return datos
 
 
-def regrabar(estado: dict, trabajo: Path, navegador, previas: dict[str, Path], max_fotogramas: int) -> dict:
+def regrabar(estado: dict, trabajo: Path, navegador, previas: dict[str, Path], max_fotogramas: int,
+             forzar: bool = False) -> dict:
     """Vuelve a fotografiar y grabar un hito desde su sitio guardado, sin checkout ni build."""
     dir_hito = trabajo / "hitos" / estado["sha"][:12]
     with Servidor(dir_hito / "sitio") as s:
-        datos = _rodar(estado["receta"]["tipo"], s.url, dir_hito, navegador, previas, max_fotogramas)
+        datos = _rodar(estado["receta"]["tipo"], s.url, dir_hito, navegador, previas, max_fotogramas, forzar)
     if datos and datos.get("fichas"):
         estado.update(ok=True, fotos=datos)
     (dir_hito / "estado.json").write_text(json.dumps(estado, indent=1, ensure_ascii=False), encoding="utf-8")
@@ -292,7 +294,7 @@ def regrabar(estado: dict, trabajo: Path, navegador, previas: dict[str, Path], m
 
 
 def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo: Path, navegador,
-             previas: dict[str, Path], max_fotogramas: int) -> dict:
+             previas: dict[str, Path], max_fotogramas: int, forzar: bool = False) -> dict:
     """Construye, fotografía, compara con lo que ya se enseñó y graba la app en uso.
 
     previas: la foto clara más reciente de cada ficha ya enseñada (vacía en el primer hito).
@@ -308,7 +310,7 @@ def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo
     historia.git(clon, "checkout", "--quiet", "--detach", "--force", hito.sha)
     historia.git(clon, "clean", "-qffdx", "-e", "node_modules")
 
-    rodar = lambda base: _rodar(receta.tipo, base, dir_hito, navegador, previas, max_fotogramas)
+    rodar = lambda base: _rodar(receta.tipo, base, dir_hito, navegador, previas, max_fotogramas, forzar)
 
     datos = None
     if receta.tipo == "estatico":
@@ -320,6 +322,8 @@ def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo
     elif not _instalar(clon, receta, trabajo, log):
         estado["motivo"] = "falla la instalación de dependencias"
     else:
+        if receta.preparar and not _correr(receta.preparar, clon, log, T_INSTALAR):
+            pass  # una preparación que falla no para el build: si hacía falta, el build lo dirá
         salida = _construir(clon, receta, log) if receta.construir else None
         if salida:
             # Se guarda el sitio construido: --regrabar vuelve a grabar la app en uso sin construir otra vez.

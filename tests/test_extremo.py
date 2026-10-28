@@ -66,3 +66,30 @@ def test_sin_interfaz(repo, tmp_path, monkeypatch, capsys):
 
 def test_no_es_repo(tmp_path):
     assert main([str(tmp_path)]) == 2
+
+
+def test_extraccion_a_otro_repositorio(tmp_path, monkeypatch):
+    """Un proyecto que se muda: escena de extracción entre los dos y el primer hito del nuevo siempre sale."""
+    from tests.conftest import Repo
+    monkeypatch.setenv("CRONICA_CACHE", str(tmp_path / "cache"))
+    viejo = Repo(tmp_path / "viejo")
+    viejo.commit("Primera página", {"index.html": pagina("Mi app"), "README.md": "viejo\n"})
+    viejo.commit("Contacto", {"index.html": pagina("Mi app", ["contacto.html"]), "contacto.html": pagina("Contacto")})
+    nuevo = Repo(tmp_path / "nuevo")
+    nuevo.commit("Importa la web del repositorio viejo", {"index.html": pagina("Mi app", ["contacto.html"]),
+                                                          "contacto.html": pagina("Contacto")})
+    nuevo.commit("Precios", {"index.html": pagina("Mi app", ["contacto.html", "precios.html"]),
+                             "precios.html": pagina("Precios")})
+
+    assert main([str(viejo.raiz), str(nuevo.raiz), "--segundos", "2", "--sin-musica", "--previa"]) == 0
+
+    trabajo = next(d for d in (tmp_path / "cache").iterdir() if "+" in d.name)
+    datos = json.loads((trabajo / "video" / "datos.json").read_text(encoding="utf-8"))
+    tipos = [h.get("tipo", "hito") for h in datos["hitos"]]
+    assert tipos == ["hito", "hito", "extraccion", "hito", "hito"]
+    ext = datos["hitos"][2]
+    assert (ext["de"], ext["a"], ext["ficheros"], ext["ficheros_b"]) == ("viejo", "nuevo", 2, 2)
+    assert ext["rotulo"] == "Extracción: la interfaz se muda a nuevo"
+    # El primer hito del nuevo no cambia nada a la vista, pero sale: es el resultado de la mudanza.
+    assert datos["hitos"][3]["fotogramas"] > 0 and datos["hitos"][3]["barra"].endswith("nuevo")
+    assert len(list((trabajo / "previa").glob("*.png"))) == 7

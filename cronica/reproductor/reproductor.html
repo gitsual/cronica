@@ -31,6 +31,21 @@
   #badge.cambia b { background: var(--amber); }
   #shot { position: absolute; left: 0; top: 38px; width: 1422px; height: 800px; overflow: hidden; background: #fff; }
   #shot img { position: absolute; left: 0; top: 0; width: 1422px; height: 800px; }
+  #ext { position: absolute; inset: 0; background: radial-gradient(900px 500px at 50% 40%, #15262b, #0d1517); display: none; overflow: hidden; }
+  #ext .repo { position: absolute; top: 70px; width: 470px; height: 600px; border: 1px solid var(--line); border-radius: 14px;
+    background: rgba(23,32,36,.92); padding: 26px 28px; }
+  #ext .repo h3 { font: 600 24px ui-monospace, "JetBrains Mono", monospace; color: var(--ink); }
+  #ext .repo .n { margin-top: 18px; font-size: 54px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  #ext .repo .l { font-size: 14px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+  #ext .repo ul { list-style: none; padding: 0; margin-top: 26px; }
+  #ext .repo li { font: 15px ui-monospace, monospace; color: var(--muted); padding: 7px 10px; border-radius: 7px; margin-bottom: 6px;
+    display: flex; justify-content: space-between; }
+  #ext .repo li.va { background: rgba(0,176,189,.14); color: var(--ink); }
+  #ext .vuela { position: absolute; font: 14px ui-monospace, monospace; color: var(--ink); white-space: nowrap;
+    padding: 4px 10px; border-radius: 6px; background: rgba(0,176,189,.22); border: 1px solid rgba(0,176,189,.5); }
+  #ext .pie { position: absolute; left: 0; right: 0; bottom: 46px; text-align: center; font-size: 26px; color: var(--muted); }
+  #ext .pie b { color: var(--teal); }
+  #ext .flecha { position: absolute; left: 600px; top: 330px; width: 222px; height: 4px; background: linear-gradient(90deg, transparent, var(--teal)); }
   #lado { position: absolute; left: 1520px; top: 162px; width: 336px; }
   .cifra { display: flex; align-items: baseline; gap: 12px; height: 54px; border-bottom: 1px solid var(--line); }
   .cifra .n { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 150px; text-align: right; }
@@ -63,7 +78,7 @@
 <div id="stage">
   <header><div id="fecha"></div><div id="chip"></div><div id="rotulo"></div></header>
   <div id="browser"><div class="bar"><i></i><i></i><i></i><span id="url"></span><div id="badge"><b></b><em></em></div></div>
-    <div id="shot"><img id="a" alt=""><img id="b" alt=""></div></div>
+    <div id="shot"><img id="a" alt=""><img id="b" alt=""><div id="ext"></div></div></div>
   <div id="lado"></div>
   <div id="mosaic"></div>
   <div id="tl"><div class="fill"></div></div>
@@ -106,8 +121,12 @@ window.duration = 0
 async function load () {
   D = await (await fetch('datos.json')).json()
   H = D.hitos; CIFRAS = D.cifras
+  // El capítulo (repositorio) de cada escena: una extracción sigue en el del anterior.
+  H.forEach((h, i) => { h.capitulo = h.cap ?? (i ? H[i - 1].capitulo : 0) })
   H.forEach((h, i) => h.fichas.forEach(t => { if (!(t.key in FIRST)) { FIRST[t.key] = i; ORDER.push(t.key) } }))
-  LATEST = H.map((h, i) => { const m = i ? { ...LATEST[i - 1] } : {}; h.fichas.forEach(t => { m[t.key] = t }); return m })
+  // La foto más reciente de cada ficha en cada escena (las escenas sin fichas heredan las de la anterior).
+  LATEST = []
+  H.forEach((h, i) => { const m = { ...(LATEST[i - 1] || {}) }; h.fichas.forEach(t => { m[t.key] = t }); LATEST.push(m) })
   FIN = H.at(-1).inicio + H.at(-1).dur
   window.duration = FIN + D.outro
   const fichas = new Set(H.flatMap(h => h.fichas.flatMap(t => [t.light, t.dark].filter(Boolean))))
@@ -128,7 +147,7 @@ async function load () {
   $('url').textContent = D.barra
   $('introh').innerHTML = acento(D.titulo)
   $('introsub').textContent = `${rango} · ${H.length} cambios en la interfaz`
-  $('introbg').style.backgroundImage = `url(${fotograma(H[0], 0)})`
+  $('introbg').style.backgroundImage = `url(${fotograma(H.find(h => h.fotogramas), 0)})`
   $('outroh').innerHTML = `${lapso(H[0].fecha, last.fecha)} de ${acento(D.proyecto).replace(/^(.*)<em>/, '<em>$1')}`
   $('outrosub').textContent = D.cierre ? `${D.cierre} · ${rango}` : rango
   $('outrobig').innerHTML = CIFRAS.filter(([k]) => last.cifras[k]).map(([k, l]) => `<div><strong>${num(last.cifras[k])}</strong>${l}</div>`).join('')
@@ -182,24 +201,38 @@ function seek (t) {
   r.style.opacity = kr; r.style.transform = `translateX(${lerp(-26, 0, kr)}px)`
 
   // El clip de la escena, con un fundido corto desde el último fotograma de la anterior.
-  const f = Math.floor(local * D.fps_clip / 1000)
-  espera.push(poner($('b'), fotograma(h, f)))
-  if (prev && local < TRANS) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
-  $('b').style.opacity = prev ? k : 1
-  $('a').style.opacity = prev && local < TRANS ? 1 : 0
+  $('url').textContent = h.barra || D.barra
+  const ext = $('ext'), esExt = h.tipo === 'extraccion', deExt = prev && prev.tipo === 'extraccion'
+  if (esExt) {
+    extraccion(h, local)
+    ext.style.display = 'block'; ext.style.opacity = prev && prev.fotogramas ? k : 1
+    if (prev && prev.fotogramas && local < TRANS) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
+    $('a').style.opacity = prev && prev.fotogramas && local < TRANS ? 1 : 0; $('b').style.opacity = 0
+  } else {
+    const f = Math.floor(local * D.fps_clip / 1000)
+    espera.push(poner($('b'), fotograma(h, f)))
+    const conA = prev && prev.fotogramas && local < TRANS
+    if (conA) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
+    $('b').style.opacity = prev ? k : 1
+    $('a').style.opacity = conA ? 1 : 0
+    if (deExt && local < TRANS) { extraccion(prev, prev.dur); ext.style.display = 'block'; ext.style.opacity = 1 - k }
+    else ext.style.display = 'none'
+  }
 
   // Etiqueta de lo nuevo o lo que cambia.
   const badge = $('badge'), nuevo = h.nuevas.length > 0, lista = nuevo ? h.nuevas : h.cambiadas
   badge.className = nuevo ? '' : 'cambia'
   badge.querySelector('b').textContent = nuevo ? 'NUEVO' : 'CAMBIA'
   badge.querySelector('em').textContent = lista.slice(0, 4).join(' · ') + (lista.length > 4 ? ` +${lista.length - 4}` : '')
-  badge.style.display = lista.length && i > 0 ? 'flex' : 'none'
+  badge.style.display = lista.length && i > 0 && !esExt ? 'flex' : 'none'
   const kb = ease((local - 200) / 400)
   badge.style.opacity = kb; badge.style.transform = `scale(${lerp(.7, 1, kb)})`
 
   // Mosaico: de la rejilla de la escena anterior a esta; lo nuevo crece con un brillo, lo que cambia destella.
-  const visible = ORDER.filter(key => FIRST[key] <= i)
-  const before = ORDER.filter(key => FIRST[key] <= i - 1)
+  // Solo las fichas del repositorio de esta escena: al mudarse, el mosaico vuelve a empezar.
+  const delCap = (key, j) => Number(key.split(':')[0]) === H[Math.max(0, j)].capitulo
+  const visible = ORDER.filter(key => FIRST[key] <= i && delCap(key, i))
+  const before = ORDER.filter(key => FIRST[key] <= i - 1 && delCap(key, i - 1) && delCap(key, i))
   const out = ease(outroT / 1100)
   const W = lerp(336, 1792, out), Hh = lerp(530, 990, out)
   const mosaic = $('mosaic')
@@ -248,6 +281,44 @@ function seek (t) {
   document.querySelectorAll('#tl .dot').forEach((d, j) => d.classList.toggle('on', t >= H[j].inicio + H[j].dur - 1))
   return Promise.all(espera.filter(Boolean))
 }
+/** La escena de extracción: los ficheros vuelan del repositorio viejo al nuevo y las líneas del nuevo suben. */
+const EXT = {}
+function extraccion (h, t) {
+  const ext = $('ext')
+  if (ext.dataset.nn !== h.nn) {
+    ext.dataset.nn = h.nn
+    const carpetas = h.carpetas.map(([c, n]) => `<li data-c="${esc(c)}"><span>${esc(c)}/</span><span>${n}</span></li>`).join('')
+    ext.innerHTML = `
+      <div class="repo" style="left:60px"><h3>${esc(h.de)}</h3><div class="n">${num(h.lineas_a)}</div><div class="l">líneas</div>
+        <ul>${carpetas}</ul></div>
+      <div class="flecha"></div>
+      <div class="repo" style="left:892px"><h3>${esc(h.a)}</h3><div class="n" id="extn">0</div><div class="l">líneas al llegar</div>
+        <ul id="extl"></ul></div>
+      <div class="pie"></div>` + h.muestra.map((m, j) => `<div class="vuela" data-j="${j}">${esc(m.split('/').slice(-2).join('/'))}</div>`).join('')
+    EXT[h.nn] = { vuelos: [...ext.querySelectorAll('.vuela')], llegados: [] }
+  }
+  const e = EXT[h.nn], total = h.muestra.length, ini = 700, fin = h.dur - 1600, vuelo = 1000
+  const salidas = h.muestra.map((_, j) => ini + (fin - ini - vuelo) * j / Math.max(1, total - 1))
+  let llegados = 0
+  e.vuelos.forEach((el, j) => {
+    const k = clamp((t - salidas[j]) / vuelo), kk = ease(k)
+    const y0 = 250 + (j % 9) * 44, y1 = 250 + (j % 9) * 44
+    el.style.left = `${lerp(110, 950, kk)}px`; el.style.top = `${lerp(y0, y1, kk) - Math.sin(kk * Math.PI) * 90}px`
+    el.style.opacity = k <= 0 || k >= 1 ? 0 : Math.min(1, k * 6, (1 - k) * 6)
+    if (k >= 1) llegados++
+  })
+  // Las carpetas de origen se iluminan mientras salen sus ficheros.
+  const volando = h.muestra.filter((m, j) => t > salidas[j] && t < salidas[j] + vuelo)
+  ext.querySelectorAll('.repo li[data-c]').forEach(li => li.classList.toggle('va', volando.some(m => m.startsWith(li.dataset.c))))
+  const kl = clamp((t - ini) / (fin - ini))
+  $('extn').textContent = num(h.lineas_b * ease(kl))
+  $('extl').innerHTML = h.muestra.slice(0, llegados).slice(-9).map(m => `<li class="va"><span>${esc(m.split('/').pop())}</span></li>`).join('')
+  ext.querySelector('.pie').innerHTML = t > fin - 300
+    ? `<b>${h.ficheros}</b> de los ${h.ficheros_b} ficheros llegan idénticos · <b>${num(h.lineas_mudan)}</b> líneas que ya existían`
+    : (n => `${num(n)} fichero${n === 1 ? "" : "s"}…`)(Math.round(h.ficheros * kl))
+  ext.querySelector('.pie').style.opacity = ease((t - ini) / 500)
+}
+
 window.seek = seek
 load().then(() => seek(0))
 </script>

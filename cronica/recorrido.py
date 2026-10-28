@@ -314,3 +314,126 @@ def web(navegador, base: str, focos: list[str], carpeta: Path, maximo: int) -> i
     finally:
         ctx.close()
     return cam.n
+
+
+# ---------------------------------------------------------------- paseo final
+
+def _conmutadores(page) -> list[dict]:
+    """Los menús de la barra de Storybook que cambian un «global» (tema, diseño…): botón y opciones."""
+    try:
+        return page.evaluate("""() => {
+          const tipos = window.__STORYBOOK_PREVIEW__?.storyStoreValue?.userGlobals?.globalTypes
+            || document.querySelector('#storybook-preview-iframe')?.contentWindow?.__STORYBOOK_PREVIEW__?.storyStoreValue?.userGlobals?.globalTypes
+            || {};
+          return Object.entries(tipos).filter(([, t]) => t.toolbar && (t.toolbar.items || []).length > 1).map(([k, t]) => ({
+            clave: k, titulo: t.toolbar.title || t.description || k, descripcion: t.description || '',
+            opciones: t.toolbar.items.map(i => typeof i === 'string' ? { valor: i, titulo: i } : { valor: i.value, titulo: i.title || i.value }),
+          }))
+        }""")
+    except Exception:
+        return []
+
+
+def _boton_de(page, c: dict):
+    """El botón de la barra para un global: por su título, su descripción o el título de la opción activa."""
+    candidatos = [c["descripcion"], c["titulo"]] + [o["titulo"] for o in c["opciones"]]
+    for texto in candidatos:
+        if not texto:
+            continue
+        for sel in (f"button[title='{texto}']", f"button[aria-label='{texto}']"):
+            h = page.query_selector(sel)
+            if h and _caja(h):
+                return h
+    for h in page.query_selector_all("button"):
+        t = (h.inner_text() or "").strip()
+        if t and any(t == o["titulo"] for o in c["opciones"]) and _caja(h):
+            return h
+    return None
+
+
+def _cambiar(cam: Camara, c: dict, valor: dict) -> bool:
+    """Abre el menú del global en la barra y elige la opción, como lo haría una persona."""
+    page = cam.page
+    boton = _boton_de(page, c)
+    b = _caja(boton) if boton else None
+    if not b:
+        return False
+    cam.mover(*_centro(b))
+    cam.clic()
+    page.wait_for_timeout(200)
+    opcion = None
+    for sel in (f"[role=menuitem]:has-text('{valor['titulo']}')", f"[role=option]:has-text('{valor['titulo']}')",
+                f"button:has-text('{valor['titulo']}')", f"a:has-text('{valor['titulo']}')"):
+        for h in page.query_selector_all(sel):
+            if _caja(h) and (h.inner_text() or "").strip() == valor["titulo"]:
+                opcion = h
+                break
+        if opcion:
+            break
+    cam.deriva(4)
+    ob = _caja(opcion) if opcion else None
+    if not ob:
+        page.keyboard.press("Escape")
+        return False
+    cam.mover(*_centro(ob), fotos=10)
+    cam.clic()
+    _esperar_story(page)
+    cam.deriva(6)
+    return True
+
+
+def paseo(navegador, base: str, componentes: list[dict], carpeta: Path, maximo: int) -> int:
+    """Recorre todos los componentes desde la barra lateral y, cada pocos, cambia un tema de la barra de Storybook
+    (claro/oscuro, y cualquier otro global con menú: diseño, densidad…), para enseñarlo todo en todas sus formas."""
+    ctx = navegador.new_context(viewport={"width": ANCHO, "height": ALTO})
+    ctx.add_init_script(CURSOR)
+    page = ctx.new_page()
+    page.goto(f"{base}/index.html?path=/story/{componentes[0]['id']}&panel=false")
+    try:
+        page.wait_for_selector("#storybook-preview-iframe", timeout=20_000)
+    except Exception:
+        pass
+    _esperar_story(page)
+    cam = Camara(page, carpeta, maximo)
+    conmutadores = _conmutadores(page)
+    # Un cambio de tema cada pocos componentes, rotando por los globals y sus opciones.
+    cambios_pendientes = []
+    for c in conmutadores:
+        for o in c["opciones"][1:] + c["opciones"][:1]:
+            cambios_pendientes.append((c, o))
+    cada = max(3, len(componentes) // max(1, len(cambios_pendientes) + 1))
+    por_componente = max(14, (maximo - 60 * len(cambios_pendientes)) // max(1, len(componentes)) - 4)
+    try:
+        for k, comp in enumerate(componentes):
+            if k and k % cada == 0 and cambios_pendientes:
+                c, o = cambios_pendientes.pop(0)
+                _cambiar(cam, c, o)
+            # En la barra lateral: la story si está a la vista; si no, el componente (que se despliega y abre la
+            # primera); si tampoco, se va directo.
+            b = None
+            for item in (comp["id"], comp["id"].split("--")[0]):
+                enlace = page.query_selector(f"[data-item-id='{item}']")
+                b = _caja(enlace) if enlace else None
+                if b:
+                    break
+            if b:
+                cam.mover(*_centro(b), fotos=8)
+                cam.clic()
+            else:
+                page.goto(f"{base}/index.html?path=/story/{comp['id']}&panel=false")
+            _esperar_story(page)
+            f = _iframe(page)
+            if not (f and por_componente > 24 and _usar(cam, f, 1)):
+                marco = page.query_selector("#storybook-preview-iframe")
+                zona = _caja(marco) if marco else None
+                if zona:
+                    cam.mover(zona["x"] + zona["width"] * 0.42, zona["y"] + zona["height"] * 0.3, fotos=6)
+                cam.deriva(max(4, por_componente - 14))
+        while cambios_pendientes:
+            _cambiar(cam, *cambios_pendientes.pop(0))
+        cam.deriva(10)
+    except Lleno:
+        pass
+    finally:
+        ctx.close()
+    return cam.n
