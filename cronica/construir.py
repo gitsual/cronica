@@ -256,7 +256,7 @@ def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, P
         return datos
     nuevas, cambiadas = cambios.comparar(previas, datos["fichas"], dir_hito)
     marco, marco_antes = dir_hito / "marco.png", previas.get(cambios.MARCO)
-    if marco.exists() and marco_antes and marco_antes.exists() and cambios.distinta(marco_antes, marco):
+    if marco.exists() and marco_antes and marco_antes.exists() and cambios.distinta(marco_antes, marco, cambios.UMBRAL_MARCO):
         cambiadas.append(cambios.MARCO)
     datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not nuevas and not cambiadas)
     if datos["sin_cambios"]:

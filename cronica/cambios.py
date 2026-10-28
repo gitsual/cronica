@@ -11,10 +11,12 @@ except ImportError:  # sin Pillow se compara byte a byte (más estricto: cualqui
 UMBRAL_PIXELES = 60      # píxeles que tienen que cambiar: una palabra cambiada ya pasa; Chromium pinta igual
                          # dos veces lo mismo, así que no hay ruido que filtrar
 UMBRAL_TONO = 24
-MARCO = "__marco__"      # clave del marco de la herramienta (la barra lateral y la de Storybook)         # diferencia por canal (0-255) para contar un píxel como cambiado
+MARCO = "__marco__"      # clave del marco de la herramienta (la barra lateral y la de Storybook)
+UMBRAL_MARCO = 0.02      # el marco cuenta si cambia de verdad (un tema nuevo), no por una entrada más en la lista         # diferencia por canal (0-255) para contar un píxel como cambiado
 
 
-def distinta(a: Path, b: Path) -> bool:
+def distinta(a: Path, b: Path, umbral: float = UMBRAL_PIXELES) -> bool:
+    """umbral: píxeles que tienen que cambiar o, si es menor que 1, fracción de la imagen."""
     if Image is None:
         return a.read_bytes() != b.read_bytes()
     with Image.open(a) as ia, Image.open(b) as ib:
@@ -25,7 +27,7 @@ def distinta(a: Path, b: Path) -> bool:
             return False
         hist = dif.histogram()
         cambiados = sum(hist[UMBRAL_TONO:])
-        return cambiados > UMBRAL_PIXELES
+        return cambiados > (umbral * ia.size[0] * ia.size[1] if umbral < 1 else umbral)
 
 
 def comparar(previas: dict[str, Path], fichas: list[dict], carpeta: Path) -> tuple[list[str], list[str]]:
