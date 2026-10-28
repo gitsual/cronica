@@ -86,6 +86,8 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--trabajo", help="carpeta de trabajo (por defecto, en la caché del usuario)")
     ap.add_argument("--preparar", action="append", metavar="CMD",
                     help="orden que se ejecuta tras instalar y antes de construir («repo=orden» para uno solo)")
+    ap.add_argument("--tambien", action="append", metavar="CARPETA",
+                    help="un repositorio que no sale en pantalla pero cuenta en las cifras (carpeta o carpeta@rama)")
     ap.add_argument("--paseo", nargs="?", type=float, const=60.0, metavar="SEGUNDOS",
                     help="al final, un paseo por todos los componentes cambiando los temas de la barra (60 s)")
     ap.add_argument("--version", action="version", version=f"cronica {__version__}")
@@ -189,7 +191,15 @@ def _ejecutar(args: argparse.Namespace) -> int:
             print("  Hacen falta al menos dos hitos que se puedan fotografiar. Mira los logs de arriba.")
             return 4
 
-        escenas = _escenas(capitulos)
+        acompanantes = []
+        for t in args.tambien or []:
+            carpeta, rama = _carpeta_y_rama(t)
+            if not historia.es_repo(carpeta):
+                print(f"«{carpeta}» no es una carpeta con un repositorio git.")
+                return 2
+            raiz = historia.raiz(carpeta)
+            acompanantes.append((raiz, rama or historia.rama_actual(raiz)))
+        escenas = _escenas(capitulos, acompanantes)
         if args.paseo:
             paseo = _paseo(capitulos[-1], trabajo, navegador, args, len(escenas) + 1)
             if paseo:
@@ -298,9 +308,14 @@ def _preparar_para(repo: Path, entradas: list[str]) -> list[str] | None:
     return None
 
 
-def _escenas(capitulos: list[Capitulo]) -> list[dict]:
-    """Los hitos de cada repositorio, numerados seguidos, con una escena de extracción entre uno y otro."""
+def _escenas(capitulos: list[Capitulo], acompanantes: list[tuple[Path, str]] | None = None) -> list[dict]:
+    """Los hitos de cada repositorio, numerados seguidos, con una escena de extracción entre uno y otro.
+
+    Con varios repositorios (o con --tambien), las cifras de cada escena son las de todos juntos ese día: al
+    extraer una parte, el proyecto no encoge.
+    """
     escenas, n = [], 0
+    ecosistema = [(c.repo, c.rama) for c in capitulos] + list(acompanantes or [])
     for k, cap in enumerate(capitulos):
         if k:
             antes = capitulos[k - 1]
@@ -312,6 +327,8 @@ def _escenas(capitulos: list[Capitulo]) -> list[dict]:
                             "titulo": f"Extracción: {que} se muda a {cap.nombre}", "barra": f"git · {cap.nombre}", **ext})
         for h in _datos_hitos(cap.repo, cap.todos, cap.hechos):
             n += 1
+            if len(ecosistema) > 1:
+                h["cifras"] = historia.cifras_ecosistema(ecosistema, h["fecha"])
             escenas.append({**h, "nn": f"{n:02d}", "dir": str(cap.trabajo), "cap": k,
                             "barra": f"{'storybook' if cap.tipo == 'storybook' else 'localhost'} · {cap.nombre}"})
     return escenas

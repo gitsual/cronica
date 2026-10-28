@@ -60,3 +60,15 @@ def test_detectar_tipos(repo):
 def test_nada_que_fotografiar(repo):
     sha = repo.commit("una librería", {"src/lib.py": "x = 1\n", "README.md": "hola"})
     assert detectar.detectar(repo.raiz, sha) is None
+
+
+def test_cifras_del_ecosistema_por_fecha(tmp_path):
+    """Varios repositorios juntos, tal como estaban cada día: lo que se extrae de uno sigue contando en otro."""
+    from tests.conftest import Repo
+    a, b = Repo(tmp_path / "a"), Repo(tmp_path / "b")
+    a.commit("uno", {"x.txt": "1\n2\n"}, autor="Ana")            # día 2
+    b.dia = 3
+    b.commit("dos", {"y.txt": "3\n"}, autor="Bea")               # día 4
+    eco = [(a.raiz, "main"), (b.raiz, "main")]
+    assert historia.cifras_ecosistema(eco, "2026-01-03") == {"ficheros": 1, "lineas": 2, "commits": 1, "autores": 1}
+    assert historia.cifras_ecosistema(eco, "2026-01-04") == {"ficheros": 2, "lineas": 3, "commits": 2, "autores": 2}

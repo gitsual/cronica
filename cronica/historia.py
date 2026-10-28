@@ -226,3 +226,33 @@ def extraccion(repo_a: Path, sha_a: str, repo_b: Path, sha_b: str) -> dict:
         "carpetas": sorted(carpetas.items(), key=lambda x: -x[1])[:6],
         "muestra": sorted(origen)[::paso][:36],
     }
+
+
+def en_fecha(repo: Path, rama: str, fecha: str) -> str | None:
+    """El último commit de la rama (por su primer padre) hecho ese día o antes; None si aún no existía."""
+    sha = git(repo, "rev-list", "-1", "--first-parent", f"--before={fecha} 23:59:59", rama).strip()
+    return sha or None
+
+
+def autores(repo: Path, sha: str) -> set[str]:
+    return {l.split("\t", 1)[1].strip() for l in git(repo, "shortlog", "-sn", "--no-merges", sha, entrada="").splitlines()
+            if "\t" in l}
+
+
+def cifras_ecosistema(repos: list[tuple[Path, str]], fecha: str, _cache: dict = {}) -> dict[str, int]:
+    """Las cifras de varios repositorios juntos tal como estaban ese día: ficheros, líneas y commits sumados,
+    autores sin repetir. Es lo que mide el alcance real cuando un proyecto se reparte en varios repositorios."""
+    total = {"ficheros": 0, "lineas": 0, "commits": 0}
+    gente: set[str] = set()
+    for repo, rama in repos:
+        sha = en_fecha(repo, rama, fecha)
+        if not sha:
+            continue
+        clave = (str(repo), sha)
+        if clave not in _cache:
+            _cache[clave] = (cifras_git(repo, sha), autores(repo, sha))
+        c, a = _cache[clave]
+        for k in total:
+            total[k] += c[k]
+        gente |= a
+    return {**total, "autores": len(gente)}
