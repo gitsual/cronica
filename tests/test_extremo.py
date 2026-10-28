@@ -18,10 +18,11 @@ def test_de_la_carpeta_al_video(repo, tmp_path, monkeypatch):
                                                    "contacto.html": pagina("Contacto")})
     repo.pr(2, "precios", "Tabla de precios", {"index.html": pagina("Mi app", ["contacto.html", "precios.html"]),
                                                 "precios.html": pagina("Precios")})
-    repo.commit("Arregla una errata", {"contacto.html": pagina("Contacto", cuerpo="Escríbenos")})
+    repo.pr(3, "errata", "Arregla una errata", {"contacto.html": pagina("Contacto", cuerpo="Escríbenos")})
+    repo.commit("Actualiza el README", {"README.md": "Sin cambios en la interfaz"})
     salida = tmp_path / "video.mp4"
 
-    assert main([str(repo.raiz), "-o", str(salida), "--segundos", "1", "--fps", "6"]) == 0
+    assert main([str(repo.raiz), "-o", str(salida), "--segundos", "2", "--fps", "6"]) == 0
 
     trabajo = next((tmp_path / "cache").iterdir())
     datos = json.loads((trabajo / "video" / "datos.json").read_text(encoding="utf-8"))
@@ -29,12 +30,19 @@ def test_de_la_carpeta_al_video(repo, tmp_path, monkeypatch):
                                                      "Arregla una errata"]
     assert [h["cifras"]["pantallas"] for h in datos["hitos"]] == [1, 2, 3, 3]
     assert datos["hitos"][1]["chip"].startswith("#1 · ")
+    # Cada escena dice qué entra o qué cambia, y lleva su clip de la app en uso.
+    assert datos["hitos"][1]["nuevas"] == ["contacto.html"]
+    assert datos["hitos"][3]["nuevas"] == [] and datos["hitos"][3]["cambiadas"] == ["contacto.html"]
+    assert all(h["fotogramas"] >= 20 for h in datos["hitos"])
+    clip = trabajo / "hitos" / datos["hitos"][1]["clip"].split("/")[2] / "clip"
+    assert len(list(clip.glob("*.jpg"))) == datos["hitos"][1]["fotogramas"]
     # El modo oscuro de la página se fotografía aparte.
     assert datos["hitos"][0]["fichas"][0].get("dark")
 
     dur = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(salida)],
                          capture_output=True, text=True).stdout
-    assert abs(float(dur) - (3.2 + 4 * 1 + 7)) < 0.6
+    esperada = (datos["intro"] + sum(h["dur"] for h in datos["hitos"]) + datos["outro"]) / 1000
+    assert abs(float(dur) - esperada) < 0.6
     streams = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "default=nw=1:nk=1",
                               str(salida)], capture_output=True, text=True).stdout.split()
     assert streams == ["video", "audio"]
@@ -43,7 +51,7 @@ def test_de_la_carpeta_al_video(repo, tmp_path, monkeypatch):
     rot = json.loads((trabajo / "rotulos.json").read_text(encoding="utf-8"))
     rot["rotulos"][datos["hitos"][2]["sha"]] = "Llegan los precios"
     (trabajo / "rotulos.json").write_text(json.dumps(rot), encoding="utf-8")
-    assert main([str(repo.raiz), "-o", str(salida), "--segundos", "1", "--fps", "6", "--sin-musica", "--previa"]) == 0
+    assert main([str(repo.raiz), "-o", str(salida), "--segundos", "2", "--fps", "6", "--sin-musica", "--previa"]) == 0
     datos = json.loads((trabajo / "video" / "datos.json").read_text(encoding="utf-8"))
     assert datos["hitos"][2]["rotulo"] == "Llegan los precios"
     assert len(list((trabajo / "previa").glob("*.png"))) == 6

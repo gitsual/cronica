@@ -1,9 +1,9 @@
-"""Fotografía un hito ya servido: la vista principal (1920x1080) y las fichas del mosaico.
+"""Fotografía las fichas del mosaico de un hito ya servido (la app en uso la graba recorrido.py).
 
   storybook  ficha = cada componente (su primera story), recortada a lo que ocupa, en claro y oscuro
   web        ficha = cada pantalla enlazada desde la portada, entera, en claro y oscuro (si la app lo distingue)
 
-Devuelve (y deja en fotos.json) {principal, fichas: [{key, nombre, light: {file, w, h}, dark}], stories}.
+Devuelve (y deja en fotos.json) {fichas: [{key, nombre, light: {file, w, h}, dark}], stories, variantes}.
 """
 from __future__ import annotations
 
@@ -110,7 +110,7 @@ def _una_por_componente(entradas: list[dict]) -> list[dict]:
     return elegidas
 
 
-def storybook(navegador, base: str, out: Path, previos: set[str]) -> dict:
+def storybook(navegador, base: str, out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     page = navegador.new_page(viewport={"width": 1280, "height": 900})
     entradas = _indice(page, base)
@@ -146,18 +146,12 @@ def storybook(navegador, base: str, out: Path, previos: set[str]) -> dict:
             fichas.append(ficha)
     page.close()
 
-    # La vista principal: el Storybook entero en el componente que entra en este hito.
-    nuevos = [f for f in fichas if f["key"] not in previos and "foundation" not in f["key"].lower()
-              and "intro" not in f["key"].lower()]
-    foco = (nuevos or fichas or [{"id": ""}])[-1]["id"]
-    page = navegador.new_page(viewport={"width": 1920, "height": 1080})
-    page.goto(f"{base}/index.html" + (f"?path=/story/{foco}" if foco else ""))
-    _asentar(page, 1500)
-    page.screenshot(path=str(out / "principal.png"))
-    page.close()
     n_stories = sum(1 for e in entradas if e["type"] == "story")
-    return _guardar(out, {"principal": "principal.png", "fichas": fichas, "stories": n_stories, "foco": foco,
-                          "avisos": avisos})
+    variantes: dict[str, list[dict]] = {}
+    for e in entradas:
+        if e["type"] == "story":
+            variantes.setdefault(e["title"], []).append({"id": e["id"], "nombre": e["name"]})
+    return _guardar(out, {"fichas": fichas, "stories": n_stories, "variantes": variantes, "avisos": avisos})
 
 
 # ---------------------------------------------------------------- web
@@ -182,7 +176,7 @@ def _rutas(page, base: str) -> list[str]:
     return rutas[:MAX_PANTALLAS - 1]
 
 
-def web(navegador, base: str, out: Path, previos: set[str]) -> dict | None:
+def web(navegador, base: str, out: Path) -> dict | None:
     """None si la portada sale vacía (build roto o app que no arranca sin backend)."""
     out.mkdir(parents=True, exist_ok=True)
     ctx = navegador.new_context(viewport={"width": 1920, "height": 1080})
@@ -222,12 +216,4 @@ def web(navegador, base: str, out: Path, previos: set[str]) -> dict | None:
         if ficha.get("light"):
             fichas.append(ficha)
 
-    nuevas = [f["key"] for f in fichas if f["key"] not in previos and f["key"] != "/"]
-    foco = nuevas[-1] if nuevas else "/"
-    ctx = navegador.new_context(viewport={"width": 1920, "height": 1080})
-    page = ctx.new_page()
-    page.goto(base + foco)
-    _asentar(page, 1200)
-    page.screenshot(path=str(out / "principal.png"))
-    ctx.close()
-    return _guardar(out, {"principal": "principal.png", "fichas": fichas, "stories": 0, "foco": foco, "avisos": avisos})
+    return _guardar(out, {"fichas": fichas, "stories": 0, "avisos": avisos})

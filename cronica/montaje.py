@@ -9,7 +9,8 @@ from pathlib import Path
 
 from .servidor import Servidor
 
-INTRO_MS, OUTRO_MS = 3200, 7000
+INTRO_MS, OUTRO_MS = 2200, 5200
+FPS_CLIP = 30  # los clips se graban a pasos; cada fotograma vale 1/30 s
 
 CIFRAS = {
     "storybook": [("componentes", "Componentes"), ("stories", "Stories"), ("ficheros", "Ficheros"),
@@ -18,41 +19,44 @@ CIFRAS = {
             ("autores", "Autores")],
 }
 CIFRAS["estatico"] = CIFRAS["web"]
+DOCS = ("foundation", "intro", "welcome")
 
 
-def preparar(video: Path, trabajo: Path, proyecto: str, tipo: str, hitos: list[dict], textos: dict,
-             por_hito_ms: int) -> dict:
-    """hitos: [{nn, sha, fecha, chip, titulo, cifras, fotos}] ya fotografiados, en orden."""
-    if video.exists():
-        shutil.rmtree(video)
-    (video / "fotos").mkdir(parents=True)
-    salida = []
+def preparar(video: Path, trabajo: Path, proyecto: str, tipo: str, hitos: list[dict], textos: dict) -> dict:
+    """hitos: [{nn, sha, fecha, chip, titulo, cifras, fotos}] con clip grabado, en orden.
+
+    El reproductor vive en trabajo/video/ y lee fotos y clips de trabajo/hitos/ (no se copia nada).
+    """
+    video.mkdir(parents=True, exist_ok=True)
+    salida, t = [], INTRO_MS
     for h in hitos:
-        origen = trabajo / "hitos" / h["sha"][:12]
-        destino = video / "fotos" / h["nn"]
-        destino.mkdir()
+        rel = f"../hitos/{h['sha'][:12]}"
         f = h["fotos"]
-        shutil.copy2(origen / f["principal"], destino / "principal.png")
+        nombres = {x["key"]: x["nombre"] for x in f["fichas"]}
         fichas = []
         for ficha in f["fichas"]:
             item = {"key": ficha["key"], "nombre": ficha["nombre"], "w": ficha["light"]["w"], "h": ficha["light"]["h"],
                     "cubre": tipo != "storybook"}
             for tema in ("light", "dark"):
                 if ficha.get(tema):
-                    shutil.copy2(origen / ficha[tema]["file"], destino / ficha[tema]["file"])
-                    item[tema] = f"fotos/{h['nn']}/{ficha[tema]['file']}"
+                    item[tema] = f"{rel}/{ficha[tema]['file']}"
             fichas.append(item)
-        visibles = [x for x in fichas if not any(p in x["key"].lower() for p in ("foundation", "intro", "welcome"))]
+        visibles = [x for x in fichas if not any(p in x["key"].lower() for p in DOCS)]
         cifras = {**h["cifras"], "componentes": len(visibles), "pantallas": len(fichas), "stories": f.get("stories", 0)}
+        dur = round(f["fotogramas"] * 1000 / FPS_CLIP)
         salida.append({"nn": h["nn"], "sha": h["sha"][:7], "fecha": h["fecha"], "chip": h["chip"],
                        "rotulo": textos["rotulos"].get(h["nn"], h["titulo"]), "cifras": cifras,
-                       "principal": f"fotos/{h['nn']}/principal.png", "fichas": fichas})
+                       "clip": f"{rel}/clip/", "fotogramas": f["fotogramas"], "inicio": t, "dur": dur,
+                       "nuevas": [nombres[k] for k in f.get("nuevas", []) if k in nombres],
+                       "cambiadas": [nombres[k] for k in f.get("cambiadas", []) if k in nombres],
+                       "fichas": fichas})
+        t += dur
     ultimo = salida[-1]["cifras"] if salida else {}
     definicion = [[k, l] for k, l in CIFRAS[tipo] if ultimo.get(k)]
     datos = {
         "proyecto": proyecto, "titulo": textos.get("titulo") or proyecto, "cierre": textos.get("cierre") or "",
-        "barra": f"{'storybook' if tipo == 'storybook' else 'localhost'} · {proyecto}",
-        "cifras": definicion, "por_hito": por_hito_ms, "intro": INTRO_MS, "outro": OUTRO_MS, "hitos": salida,
+        "barra": f"{'storybook' if tipo == 'storybook' else 'localhost'} · {proyecto}", "cifras": definicion,
+        "fps_clip": FPS_CLIP, "intro": INTRO_MS, "outro": OUTRO_MS, "hitos": salida,
     }
     (video / "datos.json").write_text(json.dumps(datos, indent=1, ensure_ascii=False), encoding="utf-8")
     html = resources.files("cronica").joinpath("reproductor/reproductor.html").read_text(encoding="utf-8")
@@ -61,13 +65,13 @@ def preparar(video: Path, trabajo: Path, proyecto: str, tipo: str, hitos: list[d
 
 
 def duracion_ms(datos: dict) -> int:
-    return datos["intro"] + len(datos["hitos"]) * datos["por_hito"] + datos["outro"]
+    return datos["intro"] + sum(h["dur"] for h in datos["hitos"]) + datos["outro"]
 
 
 def _abrir(navegador, video: Path):
-    srv = Servidor(video)
+    srv = Servidor(video.parent)
     page = navegador.new_page(viewport={"width": 1920, "height": 1080})
-    page.goto(f"{srv.url}/reproductor.html")
+    page.goto(f"{srv.url}/{video.name}/reproductor.html")
     page.wait_for_function("window.ready === true", timeout=180_000)
     return srv, page
 
@@ -79,7 +83,7 @@ def fotogramas(navegador, video: Path, instantes_ms: list[int], destino: Path) -
     rutas = []
     try:
         for ms in instantes_ms:
-            page.evaluate(f"seek({ms})")
+            page.evaluate(f"seek({ms})")  # devuelve una promesa: espera a que el fotograma del clip esté pintado
             ruta = destino / f"{ms:07d}.png"
             page.screenshot(path=str(ruta))
             rutas.append(ruta)

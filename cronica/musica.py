@@ -30,12 +30,11 @@ def _envolvente(n: int, ataque: float, caida: float) -> np.ndarray:
     return e
 
 
-def generar(destino: Path, duracion_s: float, inicio_s: float, por_hito_s: float) -> Path:
+def generar(destino: Path, duracion_s: float, cambios_s: list[float]) -> Path:
+    """cambios_s: cuándo empieza cada escena después de la primera (ahí cambia el acorde)."""
     n = int(duracion_s * SR)
     izq, der = np.zeros(n), np.zeros(n)
-    # Los acordes empiezan con la primera escena; la intro lleva el primero.
-    cortes = [0.0] + [inicio_s + k * por_hito_s for k in range(1, int((duracion_s - inicio_s) / por_hito_s) + 1)]
-    cortes.append(duracion_s)
+    cortes = [0.0] + [c for c in cambios_s if 0 < c < duracion_s] + [duracion_s]
     for k in range(len(cortes) - 1):
         a, b = int(cortes[k] * SR), min(n, int(cortes[k + 1] * SR) + int(1.2 * SR))
         if b <= a:

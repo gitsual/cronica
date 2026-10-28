@@ -71,7 +71,7 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
                     help="rótulos escritos por un modelo local (Ollama en :11434 o CRONICA_LLM=http://…/v1)")
     ap.add_argument("--musica", help="un fichero de audio para el fondo (por defecto se genera una)")
     ap.add_argument("--sin-musica", action="store_true")
-    ap.add_argument("--segundos", type=float, default=3.6, help="segundos por hito (3.6)")
+    ap.add_argument("--segundos", type=float, default=6.0, help="segundos como mucho de app en uso por hito (6)")
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--previa", action="store_true", help="no graba el vídeo: deja fotogramas sueltos para revisar")
     ap.add_argument("--reintentar", action="store_true", help="vuelve a construir los hitos que fallaron")
@@ -152,28 +152,30 @@ def _ejecutar(args: argparse.Namespace) -> int:
 
     with sync_playwright() as p:
         navegador = _abrir_chromium(p)
-        previos: set[str] = set()
+        previas: dict[str, Path] = {}   # la última foto enseñada de cada ficha
         hechos: list[tuple[historia.Commit, dict]] = []
+        max_fotogramas = int(args.segundos * montaje.FPS_CLIP)
         for i, h in enumerate(hitos, 1):
             _, titulo = rotulos.pr_y_titulo(h)
             cab = f"  [{i:2d}/{len(hitos)}] {h.fecha} {h.sha[:7]}  {rotulos.limpiar(titulo)[:48]:<48}"
             fichero = trabajo / "hitos" / h.sha[:12] / "estado.json"
             estado = json.loads(fichero.read_text(encoding="utf-8")) if fichero.exists() else None
+            if estado and estado.get("esquema") != construir.ESQUEMA:
+                estado = None
             if estado and (estado["ok"] or not args.reintentar):
-                print(f"{cab} (caché) {'ok' if estado['ok'] else 'salta: ' + estado['motivo']}")
+                print(f"{cab} (caché) {_resumen(estado)}")
             else:
                 print(cab, end=" ", flush=True)
                 receta = detectar.detectar(repo, h.sha, tipo)
                 inicio = time.time()
-                estado = construir.procesar(h, receta, clon, trabajo, navegador, previos)
-                fin = f"{time.time() - inicio:.0f} s"
-                print(f"ok, {len(estado['fotos']['fichas'])} fichas ({fin})" if estado["ok"]
-                      else f"salta: {estado['motivo']} ({fin}; log: {estado['log']})")
+                estado = construir.procesar(h, receta, clon, trabajo, navegador, previas, max_fotogramas)
+                print(f"{_resumen(estado)} ({time.time() - inicio:.0f} s)")
                 for aviso in (estado.get("fotos") or {}).get("avisos", []):
                     print(f"        · sin foto: {aviso}")
-            if estado["ok"]:
+            if estado["ok"] and not estado["fotos"].get("sin_cambios"):
                 hechos.append((h, estado))
-                previos |= {f["key"] for f in estado["fotos"]["fichas"]}
+                carpeta = trabajo / "hitos" / h.sha[:12]
+                previas.update({f["key"]: carpeta / f["light"]["file"] for f in estado["fotos"]["fichas"]})
 
         if len(hechos) < 2:
             print("  Hacen falta al menos dos hitos que se puedan fotografiar. Mira los logs de arriba.")
@@ -181,12 +183,11 @@ def _ejecutar(args: argparse.Namespace) -> int:
 
         datos_hitos = _datos_hitos(repo, todos, hechos)
         textos = _textos(trabajo, nombre, datos_hitos, args)
-        video = montaje.preparar(trabajo / "video", trabajo, nombre, tipo, datos_hitos, textos, int(args.segundos * 1000))
+        video = montaje.preparar(trabajo / "video", trabajo, nombre, tipo, datos_hitos, textos)
         duracion = montaje.duracion_ms(video)
 
         if args.previa:
-            instantes = [1000] + [video["intro"] + int((k + 0.75) * video["por_hito"]) for k in range(len(datos_hitos))] \
-                        + [duracion - 3000]
+            instantes = [1000] + [h["inicio"] + int(h["dur"] * 0.6) for h in video["hitos"]] + [duracion - 2000]
             fotos = montaje.fotogramas(navegador, trabajo / "video", instantes, trabajo / "previa")
             print(f"\n  {len(fotos)} fotogramas en {trabajo / 'previa'}")
             print(f"  rótulos editables: {trabajo / 'rotulos.json'}")
@@ -197,7 +198,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
             audio = Path(args.musica).resolve()
         elif not args.sin_musica:
             from . import musica
-            audio = musica.generar(trabajo / "musica.wav", duracion / 1000, video["intro"] / 1000, video["por_hito"] / 1000)
+            audio = musica.generar(trabajo / "musica.wav", duracion / 1000, [h["inicio"] / 1000 for h in video["hitos"][1:]])
         print(f"  {len(datos_hitos)} escenas, {duracion / 1000:.0f} s de vídeo")
         montaje.renderizar(navegador, trabajo / "video", salida, args.fps, audio, ffmpeg)
         navegador.close()
@@ -206,6 +207,20 @@ def _ejecutar(args: argparse.Namespace) -> int:
     print(f"\nHecho en {minutos:.0f} min: {salida}")
     print(f"  Para cambiar los textos, edita {trabajo / 'rotulos.json'} y relanza (todo lo demás sale de la caché).")
     return 0
+
+
+def _resumen(estado: dict) -> str:
+    if not estado["ok"]:
+        return f"salta: {estado['motivo']} (log: {estado['log']})"
+    f = estado["fotos"]
+    if f.get("sin_cambios"):
+        return "sin cambios a la vista: no sale"
+    partes = []
+    if f.get("nuevas"):
+        partes.append(f"{len(f['nuevas'])} nuevas")
+    if f.get("cambiadas"):
+        partes.append(f"{len(f['cambiadas'])} cambian")
+    return f"ok, {', '.join(partes) or 'arranque'}; en uso: {', '.join(f.get('focos', []))} ({f.get('fotogramas', 0) / 30:.1f} s)"
 
 
 def _datos_hitos(repo: Path, todos: list[historia.Commit], hechos: list[tuple[historia.Commit, dict]]) -> list[dict]:
@@ -219,7 +234,7 @@ def _datos_hitos(repo: Path, todos: list[historia.Commit], hechos: list[tuple[hi
         salida.append({
             "nn": f"{k:02d}", "sha": h.sha, "fecha": h.fecha, "chip": rotulos.chip(h), "titulo": rotulos.limpiar(titulo),
             "cifras": historia.cifras_git(repo, h.sha), "fotos": estado["fotos"],
-            "nuevas": [f["nombre"] for f in estado["fotos"]["fichas"] if f["key"] not in vistas],
+            "nuevas": [f["nombre"] for f in estado["fotos"]["fichas"] if f["key"] in estado["fotos"].get("nuevas", [])],
             "commits": [c.asunto for c in entre if not c.merge] or [c.asunto for c in entre],
         })
         vistas |= set(claves)

@@ -6,46 +6,54 @@
 <style>
   :root {
     --bg: #0e1416; --panel: #172024; --line: #24343a; --ink: #eef3f4; --muted: #8fa3a9;
-    --teal: #00b0bd; --teal-soft: rgba(0, 176, 189, .18);
+    --teal: #00b0bd; --amber: #f2b13a;
   }
   * { box-sizing: border-box; margin: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--ink);
     font-family: "Noto Sans", "Segoe UI", system-ui, sans-serif; }
-  body { background: radial-gradient(1200px 700px at 30% 0%, #16272c 0%, var(--bg) 60%); }
+  body { background: radial-gradient(1300px 760px at 28% 0%, #16272c 0%, var(--bg) 62%); }
   #stage { position: absolute; inset: 0; }
-  header { position: absolute; left: 64px; top: 44px; right: 64px; height: 120px; }
-  #fecha { font-size: 22px; letter-spacing: .28em; color: var(--teal); font-weight: 700; }
-  #pr { position: absolute; right: 0; top: 0; font: 600 20px/1 ui-monospace, "JetBrains Mono", monospace; color: var(--muted);
-    border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; }
-  #rotulo { margin-top: 14px; font-size: 52px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; max-width: 1500px; }
-  #browser { position: absolute; left: 64px; top: 200px; width: 1120px; height: 668px; border-radius: 14px; overflow: hidden;
-    background: var(--panel); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.45); }
-  #browser .bar { height: 38px; background: #1c272b; display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+  header { position: absolute; left: 64px; top: 34px; right: 64px; height: 120px; }
+  #fecha { font-size: 21px; letter-spacing: .28em; color: var(--teal); font-weight: 700; }
+  #chip { position: absolute; right: 0; top: 0; font: 600 19px/1 ui-monospace, "JetBrains Mono", monospace;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; }
+  #rotulo { margin-top: 10px; font-size: 50px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; max-width: 1424px; }
+  #browser { position: absolute; left: 64px; top: 162px; width: 1424px; height: 838px; border-radius: 14px; overflow: hidden;
+    background: var(--panel); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.5); transform-origin: 50% 50%; }
+  #browser .bar { height: 38px; background: #1c272b; display: flex; align-items: center; gap: 8px; padding: 0 14px; }
   #browser .bar i { width: 12px; height: 12px; border-radius: 50%; background: #34464c; }
-  #browser .bar span { margin-left: 18px; font: 14px ui-monospace, monospace; color: var(--muted); }
-  #shot { position: absolute; left: 0; top: 38px; width: 1120px; height: 630px; overflow: hidden; }
-  #shot img { position: absolute; left: 0; top: 0; width: 1120px; height: 630px; transform-origin: 0 0; }
-  #mosaic { position: absolute; left: 1224px; top: 200px; width: 632px; height: 668px; }
-  .tile { position: absolute; border-radius: 10px; overflow: hidden; background: #232e33; border: 1px solid var(--line); }
+  #browser .bar span { margin-left: 16px; font: 14px ui-monospace, monospace; color: var(--muted); }
+  #badge { position: absolute; right: 12px; top: 6px; height: 26px; display: flex; align-items: center; gap: 10px;
+    padding: 0 12px 0 4px; border-radius: 999px; background: rgba(0,176,189,.16); font-size: 15px; font-weight: 600;
+    white-space: nowrap; transform-origin: 100% 50%; }
+  #badge b { background: var(--teal); color: #071113; border-radius: 999px; padding: 3px 9px; font-size: 12px; letter-spacing: .12em; }
+  #badge.cambia { background: rgba(242,177,58,.15); }
+  #badge.cambia b { background: var(--amber); }
+  #shot { position: absolute; left: 0; top: 38px; width: 1422px; height: 800px; overflow: hidden; background: #fff; }
+  #shot img { position: absolute; left: 0; top: 0; width: 1422px; height: 800px; }
+  #lado { position: absolute; left: 1520px; top: 162px; width: 336px; }
+  .cifra { display: flex; align-items: baseline; gap: 12px; height: 54px; border-bottom: 1px solid var(--line); }
+  .cifra .n { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 150px; text-align: right; }
+  .cifra .l { font-size: 14px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+  #mosaic { position: absolute; left: 1520px; top: 470px; width: 336px; height: 530px; }
+  .tile { position: absolute; border-radius: 9px; overflow: hidden; background: #232e33; border: 1px solid var(--line); }
   .tile img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -55%); }
+  .tile.cubre img { left: 0; top: 0; transform: none; }
   .tile .light { opacity: 0; }
-  .tile b { position: absolute; left: 8px; bottom: 6px; font-size: 11px; font-weight: 600; color: var(--muted);
-    text-shadow: 0 1px 2px #000; }
-  #cifras { position: absolute; left: 64px; right: 64px; top: 900px; display: flex; gap: 20px; }
-  .cifra { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; }
-  .cifra .n { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .cifra .l { font-size: 15px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
-  #tl { position: absolute; left: 64px; right: 64px; top: 1032px; height: 4px; background: var(--line); border-radius: 2px; }
+  .tile b { position: absolute; left: 7px; bottom: 5px; font-size: 11px; font-weight: 600; color: var(--muted); text-shadow: 0 1px 2px #000; }
+  #tl { position: absolute; left: 64px; right: 64px; top: 1036px; height: 4px; background: var(--line); border-radius: 2px; }
   #tl .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--teal); border-radius: 2px; }
   #tl .dot { position: absolute; top: -4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
     background: var(--bg); border: 2px solid var(--line); }
   #tl .dot.on { border-color: var(--teal); background: var(--teal); }
   .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(14,20,22,.86); backdrop-filter: blur(8px); text-align: center; }
-  .tile.cubre img { left: 0; top: 0; transform: none; }
-  .card h1 { font-size: 84px; letter-spacing: -.02em; }
+    text-align: center; }
+  #intro { background: rgba(14,20,22,.72); }
+  #introbg { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(14px) brightness(.55); }
+  #outro { background: rgba(14,20,22,.86); backdrop-filter: blur(8px); }
+  .card h1 { position: relative; font-size: 88px; letter-spacing: -.02em; }
   .card h1 em { font-style: normal; color: var(--teal); }
-  .card p { margin-top: 22px; font-size: 30px; color: var(--muted); }
+  .card p { position: relative; margin-top: 22px; font-size: 30px; color: var(--muted); }
   .card .big { display: flex; gap: 56px; margin-top: 44px; }
   .card .big div { font-size: 22px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
   .card .big strong { display: block; font-size: 72px; color: var(--ink); letter-spacing: 0; }
@@ -53,20 +61,18 @@
 </head>
 <body>
 <div id="stage">
-  <header><div id="fecha"></div><div id="pr"></div><div id="rotulo"></div></header>
-  <div id="browser"><div class="bar"><i></i><i></i><i></i><span id="url"></span></div>
+  <header><div id="fecha"></div><div id="chip"></div><div id="rotulo"></div></header>
+  <div id="browser"><div class="bar"><i></i><i></i><i></i><span id="url"></span><div id="badge"><b></b><em></em></div></div>
     <div id="shot"><img id="a" alt=""><img id="b" alt=""></div></div>
+  <div id="lado"></div>
   <div id="mosaic"></div>
-  <div id="cifras"></div>
   <div id="tl"><div class="fill"></div></div>
-  <div class="card" id="intro"><h1 id="introh"></h1><p id="introsub"></p></div>
+  <div class="card" id="intro"><div id="introbg"></div><h1 id="introh"></h1><p id="introsub"></p></div>
   <div class="card" id="outro"><h1 id="outroh"></h1><p id="outrosub"></p><div class="big" id="outrobig"></div></div>
 </div>
 <script>
-let INTRO = 3200, PER = 3600, OUTRO = 7000
-const TRANS = 750
+const TRANS = 380
 const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
-let CIFRAS = []
 const $ = id => document.getElementById(id)
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x))
 const ease = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
@@ -86,34 +92,43 @@ function lapso (a, b) {
   if (dias < 730) return di(Math.round(dias / 30.4), 'mes', 'meses')
   return di(Math.round(dias / 365), 'año', 'años')
 }
+/** Reduce la letra hasta que el texto quepa en `ancho`. */
+function encajar (el, ancho) {
+  el.style.fontSize = ''
+  let px = parseFloat(getComputedStyle(el).fontSize)
+  while (el.scrollWidth > ancho && px > 20) { px -= 2; el.style.fontSize = `${px}px` }
+}
+const fotograma = (h, f) => `${h.clip}${String(clamp(f, 0, h.fotogramas - 1)).padStart(4, '0')}.jpg`
 
-let H = [], ORDER = [], FIRST = {}, LATEST = []
+let D, H = [], CIFRAS = [], ORDER = [], FIRST = {}, LATEST = [], FIN = 0
 window.duration = 0
 
 async function load () {
-  const D = await (await fetch('datos.json')).json()
-  H = D.hitos; CIFRAS = D.cifras; INTRO = D.intro; PER = D.por_hito; OUTRO = D.outro
-  // Cada ficha entra en el primer hito que la tiene y se ve con su foto más reciente.
+  D = await (await fetch('datos.json')).json()
+  H = D.hitos; CIFRAS = D.cifras
   H.forEach((h, i) => h.fichas.forEach(t => { if (!(t.key in FIRST)) { FIRST[t.key] = i; ORDER.push(t.key) } }))
   LATEST = H.map((h, i) => { const m = i ? { ...LATEST[i - 1] } : {}; h.fichas.forEach(t => { m[t.key] = t }); return m })
-  window.duration = INTRO + H.length * PER + OUTRO
-  const srcs = new Set(H.flatMap(h => [h.principal, ...h.fichas.flatMap(t => [t.light, t.dark].filter(Boolean))]))
-  await Promise.all([...srcs].map(src => new Promise(ok => { const im = new Image(); im.onload = im.onerror = ok; im.src = src })))
+  FIN = H.at(-1).inicio + H.at(-1).dur
+  window.duration = FIN + D.outro
+  const fichas = new Set(H.flatMap(h => h.fichas.flatMap(t => [t.light, t.dark].filter(Boolean))))
+  await Promise.all([...fichas].map(src => new Promise(ok => { const im = new Image(); im.onload = im.onerror = ok; im.src = src })))
   const mosaic = $('mosaic')
   for (const key of ORDER) {
     const el = document.createElement('div'); el.className = 'tile'; el.dataset.key = key
     el.innerHTML = '<img class="dark" alt=""><img class="light" alt=""><b></b>'
-    el.querySelector('b').textContent = LATEST.at(-1)[key]?.nombre ?? key.split('/').pop()
-    if (LATEST.at(-1)[key]?.cubre) el.classList.add('cubre')
+    const ultima = LATEST.at(-1)[key]
+    el.querySelector('b').textContent = ultima?.nombre ?? key.split('/').pop()
+    if (ultima?.cubre) el.classList.add('cubre')
     mosaic.appendChild(el)
   }
   const tl = $('tl')
-  H.forEach((h, i) => { const d = document.createElement('div'); d.className = 'dot'; d.style.left = `${(i + 1) / H.length * 100}%`; tl.appendChild(d) })
-  $('cifras').innerHTML = CIFRAS.map(([k, l]) => `<div class="cifra"><div class="n" data-k="${k}">0</div><div class="l">${l}</div></div>`).join('')
+  H.forEach(h => { const d = document.createElement('div'); d.className = 'dot'; d.style.left = `${(h.inicio + h.dur) / FIN * 100}%`; tl.appendChild(d) })
+  $('lado').innerHTML = CIFRAS.map(([k, l]) => `<div class="cifra"><div class="n" data-k="${k}">0</div><div class="l">${l}</div></div>`).join('')
   const last = H.at(-1), rango = `${fecha(H[0].fecha)} → ${fecha(last.fecha)}`
   $('url').textContent = D.barra
   $('introh').innerHTML = acento(D.titulo)
-  $('introsub').textContent = `${rango} · ${H.length} hitos`
+  $('introsub').textContent = `${rango} · ${H.length} cambios en la interfaz`
+  $('introbg').style.backgroundImage = `url(${fotograma(H[0], 0)})`
   $('outroh').innerHTML = `${lapso(H[0].fecha, last.fecha)} de ${acento(D.proyecto).replace(/^(.*)<em>/, '<em>$1')}`
   $('outrosub').textContent = D.cierre ? `${D.cierre} · ${rango}` : rango
   $('outrobig').innerHTML = CIFRAS.filter(([k]) => last.cifras[k]).map(([k, l]) => `<div><strong>${num(last.cifras[k])}</strong>${l}</div>`).join('')
@@ -121,93 +136,117 @@ async function load () {
   window.ready = true
 }
 
-/** Reduce la letra hasta que el texto quepa en `ancho`. */
-function encajar (el, ancho) {
-  el.style.fontSize = ''
-  let px = parseFloat(getComputedStyle(el).fontSize)
-  while (el.scrollWidth > ancho && px > 20) { px -= 2; el.style.fontSize = `${px}px` }
-}
-
-/** Rejilla para n fichas en el panel: columnas que mejor llenan el hueco. */
-function grid (n, W, Hh, gap = 10) {
+/** Rejilla para n fichas en un panel W x Hh: las columnas que mejor lo llenan. */
+function grid (n, W, Hh, gap = 8) {
   if (!n) return []
   let best = null
   for (let cols = 1; cols <= n; cols++) {
     const rows = Math.ceil(n / cols)
     const w = (W - gap * (cols - 1)) / cols, h = (Hh - gap * (rows - 1)) / rows
     const size = Math.min(w, h * 1.5)
-    if (!best || size > best.size) best = { cols, rows, w, h: Math.min(h, w / 1.1), size }
+    if (!best || size > best.size) best = { cols, w, h: Math.min(h, w / 1.1), size }
   }
   return Array.from({ length: n }, (_, j) => ({
     x: (j % best.cols) * (best.w + gap), y: Math.floor(j / best.cols) * (best.h + gap), w: best.w, h: best.h
   }))
 }
 
+function poner (img, src) {
+  if (img.dataset.src === src) return null
+  img.dataset.src = src; img.src = src
+  return img.decode().catch(() => {})
+}
+
+/** Pinta el instante t (ms). Devuelve una promesa que se cumple cuando los fotogramas del clip están pintados. */
 function seek (t) {
-  const N = H.length
-  const intro = clamp(1 - (t - INTRO + 600) / 600)
-  $('intro').style.opacity = intro
-  let i = Math.floor((t - INTRO) / PER), local = (t - INTRO) - i * PER
-  const outroT = t - INTRO - N * PER
-  if (i < 0) { i = 0; local = 0 }
-  if (i >= N) { i = N - 1; local = PER }
+  const N = H.length, outroT = t - FIN
+  let i = H.findIndex(h => t < h.inicio + h.dur)
+  if (i < 0) i = N - 1
   const h = H[i], prev = H[i - 1]
+  const local = Math.max(0, t - h.inicio)
   const k = ease(local / TRANS)
+  const espera = []
 
+  // Entrada: el título sobre el primer fotograma desenfocado, que se acerca despacio.
+  $('intro').style.opacity = clamp(1 - (t - D.intro + 500) / 500)
+  $('introbg').style.transform = `scale(${1 + .06 * clamp(t / D.intro)})`
+  const ti = ease(t / 700)
+  $('introh').style.transform = `translateY(${lerp(40, 0, ti)}px)`; $('introh').style.opacity = ti
+  $('introsub').style.opacity = ease((t - 350) / 600)
+
+  // Cabecera de la escena.
   $('fecha').textContent = fecha(h.fecha)
-  $('pr').textContent = h.chip
-  const r = $('rotulo'); if (r.textContent !== h.rotulo) { r.textContent = h.rotulo; encajar(r, 1500) }
-  r.style.opacity = ease(local / 500); r.style.transform = `translateY(${lerp(18, 0, ease(local / 500))}px)`
+  $('chip').textContent = h.chip
+  const r = $('rotulo'); if (r.dataset.nn !== h.nn) { r.dataset.nn = h.nn; r.textContent = h.rotulo; encajar(r, 1424) }
+  const kr = ease(local / 450)
+  r.style.opacity = kr; r.style.transform = `translateX(${lerp(-26, 0, kr)}px)`
 
-  const a = $('a'), b = $('b')
-  const pa = prev ? prev.principal : h.principal
-  if (a.dataset.src !== pa) { a.src = pa; a.dataset.src = pa }
-  if (b.dataset.src !== h.principal) { b.src = h.principal; b.dataset.src = h.principal }
-  b.style.opacity = prev ? k : 1
-  const zoom = 1 + .035 * clamp(local / PER)
-  b.style.transform = `scale(${zoom})`; a.style.transform = `scale(${1.035})`
+  // El clip de la escena, con un fundido corto desde el último fotograma de la anterior.
+  const f = Math.floor(local * D.fps_clip / 1000)
+  espera.push(poner($('b'), fotograma(h, f)))
+  if (prev && local < TRANS) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
+  $('b').style.opacity = prev ? k : 1
+  $('a').style.opacity = prev && local < TRANS ? 1 : 0
 
-  // Fichas: de la rejilla del hito anterior a la de este; las nuevas crecen con un brillo.
+  // Etiqueta de lo nuevo o lo que cambia.
+  const badge = $('badge'), nuevo = h.nuevas.length > 0, lista = nuevo ? h.nuevas : h.cambiadas
+  badge.className = nuevo ? '' : 'cambia'
+  badge.querySelector('b').textContent = nuevo ? 'NUEVO' : 'CAMBIA'
+  badge.querySelector('em').textContent = lista.slice(0, 4).join(' · ') + (lista.length > 4 ? ` +${lista.length - 4}` : '')
+  badge.style.display = lista.length && i > 0 ? 'flex' : 'none'
+  const kb = ease((local - 200) / 400)
+  badge.style.opacity = kb; badge.style.transform = `scale(${lerp(.7, 1, kb)})`
+
+  // Mosaico: de la rejilla de la escena anterior a esta; lo nuevo crece con un brillo, lo que cambia destella.
   const visible = ORDER.filter(key => FIRST[key] <= i)
   const before = ORDER.filter(key => FIRST[key] <= i - 1)
-  const outro = ease(outroT / 1400)
-  const W = lerp(632, 1792, outro), Hh = lerp(668, 980, outro)
+  const out = ease(outroT / 1100)
+  const W = lerp(336, 1792, out), Hh = lerp(530, 990, out)
   const mosaic = $('mosaic')
-  mosaic.style.left = `${lerp(1224, 64, outro)}px`; mosaic.style.top = `${lerp(200, 50, outro)}px`
-  const now = grid(visible.length, W, Hh), then = grid(before.length, 632, 668)
+  mosaic.style.left = `${lerp(1520, 64, out)}px`; mosaic.style.top = `${lerp(470, 45, out)}px`
+  mosaic.style.transform = outroT > 0 ? `scale(${1 + .03 * clamp(outroT / D.outro)})` : ''
+  const now = grid(visible.length, W, Hh), then = grid(before.length, 336, 530)
+  const cambian = new Set(h.cambiadas)
   for (const el of mosaic.children) {
     const key = el.dataset.key, j = visible.indexOf(key)
     if (j < 0) { el.style.display = 'none'; continue }
     el.style.display = 'block'
-    const isNew = FIRST[key] === i
+    const isNew = FIRST[key] === i && outroT <= 0
     const to = now[j], from = isNew ? to : (then[before.indexOf(key)] ?? to)
     const kk = outroT > 0 ? 1 : k
     const x = lerp(from.x, to.x, kk), y = lerp(from.y, to.y, kk), w = lerp(from.w, to.w, kk), hh = lerp(from.h, to.h, kk)
-    const s = isNew && outroT <= 0 ? lerp(.55, 1, ease(local / 600)) : 1
     el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.width = `${w}px`; el.style.height = `${hh}px`
-    el.style.transform = `scale(${s})`; el.style.opacity = isNew && outroT <= 0 ? ease(local / 400) : 1
-    const glow = isNew && outroT <= 0 ? clamp(1 - (local - 900) / 1400) : 0
-    el.style.boxShadow = glow ? `0 0 0 2px rgba(0,176,189,${glow}), 0 0 28px rgba(0,176,189,${glow * .6})` : 'none'
+    el.style.transform = `scale(${isNew ? lerp(.55, 1, ease(local / 600)) : 1})`
+    el.style.opacity = isNew ? ease(local / 400) : 1
     const tile = LATEST[i][key]
+    const brillo = outroT > 0 ? 0 : (isNew ? clamp(1 - (local - 900) / 1400) : cambian.has(tile.nombre) ? clamp(1 - (local - 500) / 1200) : 0)
+    const color = isNew ? '0,176,189' : '242,177,58'
+    el.style.boxShadow = brillo ? `0 0 0 2px rgba(${color},${brillo}), 0 0 24px rgba(${color},${brillo * .6})` : 'none'
     const [dk, lt] = el.querySelectorAll('img')
-    // Un componente cabe entero en la ficha (sin crecer más del doble); una pantalla la llena desde arriba.
-    const sc = tile.cubre ? Math.max(w / tile.w, hh / tile.h) : Math.min((w - 12) / tile.w, (hh - 28) / tile.h, 2)
+    const sc = tile.cubre ? Math.max(w / tile.w, hh / tile.h) : Math.min((w - 10) / tile.w, (hh - 24) / tile.h, 2)
     for (const im of [dk, lt]) { im.style.width = `${tile.w * sc}px`; im.style.height = `${tile.h * sc}px` }
     if (dk.dataset.src !== (tile.dark || tile.light)) { dk.src = tile.dark || tile.light; dk.dataset.src = dk.src }
     if (lt.dataset.src !== tile.light) { lt.src = tile.light; lt.dataset.src = tile.light }
     // En el cierre, una ola de claro barre la rejilla de izquierda a derecha.
-    const wave = clamp((outroT - 2200 - (x / Math.max(W, 1)) * 1400) / 500)
+    const wave = clamp((outroT - 1500 - (x / Math.max(W, 1)) * 1100) / 450)
     lt.style.opacity = wave; el.style.background = wave > .5 ? '#f0f1f2' : '#232e33'
   }
-  $('browser').style.opacity = 1 - outro; $('cifras').style.opacity = 1 - outro; document.querySelector('header').style.opacity = 1 - outro
-  $('outro').style.opacity = clamp((outroT - 3600) / 700)
+
+  // Cierre: el navegador se aparta y aparece el resumen.
+  const browser = $('browser')
+  browser.style.opacity = 1 - out; browser.style.transform = `scale(${lerp(1, .92, out)})`
+  $('lado').style.opacity = 1 - out; document.querySelector('header').style.opacity = 1 - out
+  const ko = ease((outroT - 1900) / 600)
+  $('outro').style.opacity = ko
+  $('outroh').style.transform = `translateY(${lerp(30, 0, ko)}px)`
 
   for (const el of document.querySelectorAll('.cifra .n')) {
     const key = el.dataset.k, v0 = prev ? prev.cifras[key] : 0, v1 = h.cifras[key]
-    el.textContent = num(lerp(v0 ?? 0, v1 ?? 0, prev ? k : ease(local / 1200)))
+    el.textContent = num(lerp(v0 ?? 0, v1 ?? 0, ease(local / 900)))
   }
-  $('tl').querySelector('.fill').style.width = `${clamp((i + clamp(local / PER)) / N) * 100}%`
-  document.querySelectorAll('#tl .dot').forEach((d, j) => d.classList.toggle('on', j <= i))
+  $('tl').querySelector('.fill').style.width = `${clamp(t / FIN) * 100}%`
+  document.querySelectorAll('#tl .dot').forEach((d, j) => d.classList.toggle('on', t >= H[j].inicio + H[j].dur - 1))
+  return Promise.all(espera.filter(Boolean))
 }
 window.seek = seek
 load().then(() => seek(0))

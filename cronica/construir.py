@@ -20,7 +20,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import detectar, fotos, historia
+from . import cambios, detectar, fotos, historia, recorrido
 from .servidor import Servidor
 
 T_INSTALAR = 20 * 60
@@ -228,27 +228,67 @@ def _responde(url: str) -> bool:
         return False
 
 
+ESQUEMA = 2  # sube cuando cambia lo que se guarda por hito; los estados de otro esquema se rehacen
+
+
+def _focos(tipo: str, fotos_hito: dict, nuevas: list[str], cambiadas: list[str], primero: bool) -> list[str]:
+    """Las claves que la escena enseña en uso: lo nuevo primero, luego lo que cambia (componentes antes que docs)."""
+    docs = ("foundation", "intro", "welcome", "docs", "guía", "guia")
+    es_doc = lambda k: any(d in k.lower() for d in docs)
+    if primero:
+        claves = [f["key"] for f in fotos_hito["fichas"]]
+        orden = sorted(claves, key=es_doc)
+    else:
+        orden = sorted(nuevas, key=es_doc) + sorted(cambiadas, key=es_doc)
+    if tipo != "storybook" and primero:
+        orden = ["/"] + [k for k in orden if k != "/"]
+    return orden[:2]
+
+
 def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo: Path, navegador,
-             previos: set[str]) -> dict:
-    """Construye y fotografía un hito. Devuelve el estado (también queda en hitos/<sha12>/estado.json)."""
+             previas: dict[str, Path], max_fotogramas: int) -> dict:
+    """Construye, fotografía, compara con lo que ya se enseñó y graba la app en uso.
+
+    previas: la foto clara más reciente de cada ficha ya enseñada (vacía en el primer hito).
+    El estado queda en hitos/<sha12>/estado.json: ok, sin_cambios, fotos, nuevas, cambiadas, fotogramas.
+    """
     corto = hito.sha[:12]
     dir_hito = trabajo / "hitos" / corto
     log = trabajo / "logs" / f"{corto}.log"
     log.unlink(missing_ok=True)
-    estado = {"sha": hito.sha, "receta": receta.a_dict(), "ok": False, "motivo": ""}
+    estado = {"esquema": ESQUEMA, "sha": hito.sha, "receta": receta.a_dict(), "ok": False, "motivo": ""}
+    primero = not previas
 
     historia.git(clon, "checkout", "--quiet", "--detach", "--force", hito.sha)
     historia.git(clon, "clean", "-qffdx", "-e", "node_modules")
 
-    def foto(base: str) -> dict | None:
+    def rodar(base: str) -> dict | None:
+        datos = fotos.storybook(navegador, base, dir_hito) if receta.tipo == "storybook" else fotos.web(navegador, base, dir_hito)
+        if not datos or not datos.get("fichas"):
+            return datos
+        nuevas, cambiadas = cambios.comparar(previas, datos["fichas"], dir_hito)
+        datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not nuevas and not cambiadas)
+        if datos["sin_cambios"]:
+            return datos
+        claves = _focos(receta.tipo, datos, nuevas, cambiadas, primero)
+        por_clave = {f["key"]: f for f in datos["fichas"]}
+        clip = dir_hito / "clip"
         if receta.tipo == "storybook":
-            return fotos.storybook(navegador, base, dir_hito, previos)
-        return fotos.web(navegador, base, dir_hito, previos)
+            focos = [{"id": por_clave[k]["id"], "nombre": por_clave[k]["nombre"]} for k in claves]
+            hermanas = {por_clave[k]["id"]: [v for v in datos["variantes"].get(k, []) if v["id"] != por_clave[k]["id"]]
+                        for k in claves}
+            antiguas = [f["id"] for f in datos["fichas"] if f["key"] in previas and f["key"] not in claves]
+            inicio = antiguas[0] if antiguas else focos[0]["id"]
+            datos["fotogramas"] = recorrido.storybook(navegador, base, focos, hermanas, inicio, clip, max_fotogramas)
+        else:
+            datos["fotogramas"] = recorrido.web(navegador, base, claves, clip, max_fotogramas)
+        datos["focos"] = [por_clave[k]["nombre"] for k in claves]
+        return datos
 
     datos = None
     if receta.tipo == "estatico":
         with Servidor(clon / receta.dir if receta.dir else clon) as s:
-            datos = foto(s.url)
+            datos = rodar(s.url)
         estado["motivo"] = "" if datos else "la página sale vacía"
     elif not _instalar(clon, receta, trabajo, log):
         estado["motivo"] = "falla la instalación de dependencias"
@@ -256,10 +296,10 @@ def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo
         salida = _construir(clon, receta, log) if receta.construir else None
         if salida:
             with Servidor(salida) as s:
-                datos = foto(s.url)
+                datos = rodar(s.url)
             estado["motivo"] = "" if datos else "el build se abre vacío"
         if not datos and receta.tipo == "web" and receta.dev:
-            datos = _dev(clon, receta, log, foto)
+            datos = _dev(clon, receta, log, rodar)
             estado["motivo"] = "" if datos else "ni el build ni el servidor de desarrollo dan una página"
         elif not salida and not estado["motivo"]:
             estado["motivo"] = "el build no deja resultado"
