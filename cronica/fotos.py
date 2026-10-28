@@ -17,7 +17,9 @@ MAX_FICHAS = 48
 MAX_PANTALLAS = 8
 
 CAJA_VISIBLE = """() => {
-  const root = document.querySelector('#storybook-root') || document.querySelector('#root') || document.body;
+  const docs = document.querySelector('#storybook-docs');
+  const root = (docs && !docs.hidden && docs.offsetHeight > 20) ? docs
+    : (document.querySelector('#storybook-root') || document.querySelector('#root') || document.body);
   const r = root.getBoundingClientRect();
   // Lo que se ve: texto, hojas (svg, img, input) y cajas con fondo o borde.
   // Un contenedor que ocupa todo el ancho sin pintar nada no cuenta.
@@ -94,14 +96,18 @@ def _indice(page, base: str) -> list[dict]:
                 continue
             entradas = datos.get("entries") or datos.get("stories") or {}
             return [{"id": e.get("id", k), "title": e.get("title") or e.get("kind", ""), "name": e.get("name", ""),
-                     "type": e.get("type", "story")} for k, e in entradas.items()]
+                     "type": e.get("type", "story"), "tags": e.get("tags") or []} for k, e in entradas.items()]
     return []
 
 
 def _una_por_componente(entradas: list[dict]) -> list[dict]:
+    """La story principal de cada componente y, además, cada página de documentación suelta (una guía en MDX
+    que no acompaña a ningún componente): también es interfaz que alguien abre y lee."""
     por_titulo: dict[str, list[dict]] = {}
+    con_stories = {e["title"] for e in entradas if e["type"] == "story"}
     for e in entradas:
-        if e["type"] == "story" and e["title"]:
+        suelta = e["type"] == "docs" and ("unattached-mdx" in e["tags"] or e["title"] not in con_stories)
+        if (e["type"] == "story" or suelta) and e["title"]:
             por_titulo.setdefault(e["title"], []).append(e)
     elegidas = []
     for lista in por_titulo.values():
@@ -122,7 +128,8 @@ def storybook(navegador, base: str, out: Path) -> dict:
         for tema in ("light", "dark"):
             sufijo = "&globals=theme:dark;backgrounds.value:!hex(1b1b1f)" if tema == "dark" else ""
             try:
-                page.goto(f"{base}/iframe.html?id={s['id']}&viewMode=story{sufijo}")
+                modo = "docs" if s["type"] == "docs" else "story"
+                page.goto(f"{base}/iframe.html?id={s['id']}&viewMode={modo}{sufijo}")
                 _asentar(page)
                 caja = page.evaluate(CAJA_VISIBLE)
                 if not caja:

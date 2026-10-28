@@ -39,6 +39,7 @@ CURSOR = """(() => {
   document.addEventListener('DOMContentLoaded', poner);
 })()"""
 
+ZOOM = 1.5
 INTERACTIVOS = ("button:not([disabled]), input:not([type=hidden]):not([disabled]), textarea, select, "
                 "[role=button], [role=tab], [role=switch], [role=checkbox], [role=radio], [role=combobox], "
                 "[role=option], [role=menuitem], summary, label[for]")
@@ -185,6 +186,16 @@ def _esperar_story(page) -> None:
             f.wait_for_selector("#storybook-root *, #root *, #storybook-docs *, .sbdocs *", timeout=10_000)
     except Exception:
         pass
+    # El componente, grande: en un lienzo de 1600 px un botón a tamaño real no se ve. Las páginas de
+    # documentación (foundations) se dejan como son, para que se lean enteras.
+    try:
+        f = _iframe(page)
+        if f:
+            f.evaluate("""z => { const r = document.querySelector('#storybook-root, #root');
+              if (r && !document.querySelector('#storybook-docs:not([hidden]) .sbdocs, .sb-show-main.sb-main-padded .sbdocs'))
+                r.style.zoom = z }""", ZOOM)
+    except Exception:
+        pass
     page.wait_for_timeout(350)
 
 
@@ -222,7 +233,8 @@ def storybook(navegador, base: str, focos: list[dict], hermanas: dict[str, list[
     ctx = navegador.new_context(viewport={"width": ANCHO, "height": ALTO})
     ctx.add_init_script(CURSOR)
     page = ctx.new_page()
-    page.goto(f"{base}/index.html?path=/story/{inicio}")
+    # Sin el panel de controles: la vista del componente ocupa toda la altura.
+    page.goto(f"{base}/index.html?path=/story/{inicio}&panel=false")
     try:
         page.wait_for_selector("#storybook-preview-iframe", timeout=20_000)
     except Exception:
