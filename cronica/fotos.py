@@ -115,7 +115,7 @@ def storybook(navegador, base: str, out: Path, previos: set[str]) -> dict:
     page = navegador.new_page(viewport={"width": 1280, "height": 900})
     entradas = _indice(page, base)
     stories = _una_por_componente(entradas)[:MAX_FICHAS]
-    fichas = []
+    fichas, avisos = [], []
     for s in stories:
         ficha = {"key": s["title"], "nombre": s["title"].split("/")[-1], "id": s["id"]}
         crudas = {}
@@ -141,7 +141,7 @@ def storybook(navegador, base: str, out: Path, previos: set[str]) -> dict:
             except Exception as error:  # una story rota en un commit viejo no para el resto
                 ficha[tema] = None
                 if tema == "light":
-                    print(f"      · {s['id']}: {str(error).splitlines()[0][:100]}")
+                    avisos.append(f"{s['id']}: {str(error).splitlines()[0][:100]}")
         if ficha.get("light"):
             fichas.append(ficha)
     page.close()
@@ -156,7 +156,8 @@ def storybook(navegador, base: str, out: Path, previos: set[str]) -> dict:
     page.screenshot(path=str(out / "principal.png"))
     page.close()
     n_stories = sum(1 for e in entradas if e["type"] == "story")
-    return _guardar(out, {"principal": "principal.png", "fichas": fichas, "stories": n_stories, "foco": foco})
+    return _guardar(out, {"principal": "principal.png", "fichas": fichas, "stories": n_stories, "foco": foco,
+                          "avisos": avisos})
 
 
 # ---------------------------------------------------------------- web
@@ -195,7 +196,7 @@ def web(navegador, base: str, out: Path, previos: set[str]) -> dict | None:
     rutas = ["/"] + _rutas(page, base)
     ctx.close()
 
-    fichas = []
+    fichas, avisos = [], []
     for ruta in rutas:
         ficha = {"key": ruta, "nombre": "inicio" if ruta == "/" else ruta.strip("/#").split("/")[-1] or ruta}
         crudas = {}
@@ -215,7 +216,7 @@ def web(navegador, base: str, out: Path, previos: set[str]) -> dict | None:
                 ficha[tema] = {"file": nombre, "w": 1440, "h": 900}
             except Exception as error:
                 ficha[tema] = None
-                print(f"      · {ruta}: {str(error).splitlines()[0][:100]}")
+                avisos.append(f"{ruta}: {str(error).splitlines()[0][:100]}")
             finally:
                 ctx.close()
         if ficha.get("light"):
@@ -229,4 +230,4 @@ def web(navegador, base: str, out: Path, previos: set[str]) -> dict | None:
     _asentar(page, 1200)
     page.screenshot(path=str(out / "principal.png"))
     ctx.close()
-    return _guardar(out, {"principal": "principal.png", "fichas": fichas, "stories": 0, "foco": foco})
+    return _guardar(out, {"principal": "principal.png", "fichas": fichas, "stories": 0, "foco": foco, "avisos": avisos})

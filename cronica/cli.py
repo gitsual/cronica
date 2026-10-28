@@ -169,6 +169,8 @@ def _ejecutar(args: argparse.Namespace) -> int:
                 fin = f"{time.time() - inicio:.0f} s"
                 print(f"ok, {len(estado['fotos']['fichas'])} fichas ({fin})" if estado["ok"]
                       else f"salta: {estado['motivo']} ({fin}; log: {estado['log']})")
+                for aviso in (estado.get("fotos") or {}).get("avisos", []):
+                    print(f"        · sin foto: {aviso}")
             if estado["ok"]:
                 hechos.append((h, estado))
                 previos |= {f["key"] for f in estado["fotos"]["fichas"]}
