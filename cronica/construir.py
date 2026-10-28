@@ -228,6 +228,7 @@ def _responde(url: str) -> bool:
         return False
 
 
+MAX_FOCOS = 3
 ESQUEMA = 2  # sube cuando cambia lo que se guarda por hito; los estados de otro esquema se rehacen
 
 
@@ -235,14 +236,16 @@ def _focos(tipo: str, fotos_hito: dict, nuevas: list[str], cambiadas: list[str],
     """Las claves que la escena enseña en uso: lo nuevo primero, luego lo que cambia (componentes antes que docs)."""
     docs = ("foundation", "intro", "welcome", "docs", "guía", "guia")
     es_doc = lambda k: any(d in k.lower() for d in docs)
+    # Entre iguales, primero lo que más se ve: un Navbar dice más que una línea de Dropdown.
+    area = {f["key"]: f["light"]["w"] * f["light"]["h"] for f in fotos_hito["fichas"]}
+    clave = lambda k: (es_doc(k), -area.get(k, 0))
     if primero:
-        claves = [f["key"] for f in fotos_hito["fichas"]]
-        orden = sorted(claves, key=es_doc)
+        orden = sorted(area, key=clave)
     else:
-        orden = sorted(nuevas, key=es_doc) + sorted(cambiadas, key=es_doc)
+        orden = sorted(nuevas, key=clave) + sorted(cambiadas, key=clave)
     if tipo != "storybook" and primero:
         orden = ["/"] + [k for k in orden if k != "/"]
-    return orden[:2]
+    return orden[:MAX_FOCOS]
 
 
 def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, Path], max_fotogramas: int) -> dict | None:
@@ -263,6 +266,7 @@ def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, P
         claves = _focos(tipo, datos, [], [], True)
     por_clave = {f["key"]: f for f in datos["fichas"]}
     clip = dir_hito / "clip"
+    max_fotogramas += 60 * (len(claves) - 1)  # dos segundos más por cada cosa más que enseñar
     if tipo == "storybook":
         focos = [{"id": por_clave[k]["id"], "nombre": por_clave[k]["nombre"]} for k in claves]
         hermanas = {por_clave[k]["id"]: [v for v in datos["variantes"].get(k, []) if v["id"] != por_clave[k]["id"]]
