@@ -245,6 +245,43 @@ def _focos(tipo: str, fotos_hito: dict, nuevas: list[str], cambiadas: list[str],
     return orden[:2]
 
 
+def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, Path], max_fotogramas: int) -> dict | None:
+    """Fotografía las fichas, compara con lo ya enseñado y, si algo cambia, graba la app en uso."""
+    primero = not previas
+    datos = fotos.storybook(navegador, base, dir_hito) if tipo == "storybook" else fotos.web(navegador, base, dir_hito)
+    if not datos or not datos.get("fichas"):
+        return datos
+    nuevas, cambiadas = cambios.comparar(previas, datos["fichas"], dir_hito)
+    datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not nuevas and not cambiadas)
+    if datos["sin_cambios"]:
+        return datos
+    claves = _focos(tipo, datos, nuevas, cambiadas, primero)
+    por_clave = {f["key"]: f for f in datos["fichas"]}
+    clip = dir_hito / "clip"
+    if tipo == "storybook":
+        focos = [{"id": por_clave[k]["id"], "nombre": por_clave[k]["nombre"]} for k in claves]
+        hermanas = {por_clave[k]["id"]: [v for v in datos["variantes"].get(k, []) if v["id"] != por_clave[k]["id"]]
+                    for k in claves}
+        antiguas = [f["id"] for f in datos["fichas"] if f["key"] in previas and f["key"] not in claves]
+        inicio = antiguas[0] if antiguas else focos[0]["id"]
+        datos["fotogramas"] = recorrido.storybook(navegador, base, focos, hermanas, inicio, clip, max_fotogramas)
+    else:
+        datos["fotogramas"] = recorrido.web(navegador, base, claves, clip, max_fotogramas)
+    datos["focos"] = [por_clave[k]["nombre"] for k in claves]
+    return datos
+
+
+def regrabar(estado: dict, trabajo: Path, navegador, previas: dict[str, Path], max_fotogramas: int) -> dict:
+    """Vuelve a fotografiar y grabar un hito desde su sitio guardado, sin checkout ni build."""
+    dir_hito = trabajo / "hitos" / estado["sha"][:12]
+    with Servidor(dir_hito / "sitio") as s:
+        datos = _rodar(estado["receta"]["tipo"], s.url, dir_hito, navegador, previas, max_fotogramas)
+    if datos and datos.get("fichas"):
+        estado.update(ok=True, fotos=datos)
+    (dir_hito / "estado.json").write_text(json.dumps(estado, indent=1, ensure_ascii=False), encoding="utf-8")
+    return estado
+
+
 def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo: Path, navegador,
              previas: dict[str, Path], max_fotogramas: int) -> dict:
     """Construye, fotografía, compara con lo que ya se enseñó y graba la app en uso.
@@ -262,31 +299,12 @@ def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo
     historia.git(clon, "checkout", "--quiet", "--detach", "--force", hito.sha)
     historia.git(clon, "clean", "-qffdx", "-e", "node_modules")
 
-    def rodar(base: str) -> dict | None:
-        datos = fotos.storybook(navegador, base, dir_hito) if receta.tipo == "storybook" else fotos.web(navegador, base, dir_hito)
-        if not datos or not datos.get("fichas"):
-            return datos
-        nuevas, cambiadas = cambios.comparar(previas, datos["fichas"], dir_hito)
-        datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not nuevas and not cambiadas)
-        if datos["sin_cambios"]:
-            return datos
-        claves = _focos(receta.tipo, datos, nuevas, cambiadas, primero)
-        por_clave = {f["key"]: f for f in datos["fichas"]}
-        clip = dir_hito / "clip"
-        if receta.tipo == "storybook":
-            focos = [{"id": por_clave[k]["id"], "nombre": por_clave[k]["nombre"]} for k in claves]
-            hermanas = {por_clave[k]["id"]: [v for v in datos["variantes"].get(k, []) if v["id"] != por_clave[k]["id"]]
-                        for k in claves}
-            antiguas = [f["id"] for f in datos["fichas"] if f["key"] in previas and f["key"] not in claves]
-            inicio = antiguas[0] if antiguas else focos[0]["id"]
-            datos["fotogramas"] = recorrido.storybook(navegador, base, focos, hermanas, inicio, clip, max_fotogramas)
-        else:
-            datos["fotogramas"] = recorrido.web(navegador, base, claves, clip, max_fotogramas)
-        datos["focos"] = [por_clave[k]["nombre"] for k in claves]
-        return datos
+    rodar = lambda base: _rodar(receta.tipo, base, dir_hito, navegador, previas, max_fotogramas)
 
     datos = None
     if receta.tipo == "estatico":
+        shutil.rmtree(dir_hito / "sitio", ignore_errors=True)
+        shutil.copytree(clon / receta.dir if receta.dir else clon, dir_hito / "sitio", ignore=shutil.ignore_patterns(".git"))
         with Servidor(clon / receta.dir if receta.dir else clon) as s:
             datos = rodar(s.url)
         estado["motivo"] = "" if datos else "la página sale vacía"
@@ -295,6 +313,9 @@ def procesar(hito: historia.Commit, receta: detectar.Receta, clon: Path, trabajo
     else:
         salida = _construir(clon, receta, log) if receta.construir else None
         if salida:
+            # Se guarda el sitio construido: --regrabar vuelve a grabar la app en uso sin construir otra vez.
+            shutil.rmtree(dir_hito / "sitio", ignore_errors=True)
+            shutil.copytree(salida, dir_hito / "sitio")
             with Servidor(salida) as s:
                 datos = rodar(s.url)
             estado["motivo"] = "" if datos else "el build se abre vacío"

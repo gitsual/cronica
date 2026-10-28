@@ -75,6 +75,8 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--previa", action="store_true", help="no graba el vídeo: deja fotogramas sueltos para revisar")
     ap.add_argument("--reintentar", action="store_true", help="vuelve a construir los hitos que fallaron")
+    ap.add_argument("--regrabar", action="store_true",
+                    help="vuelve a grabar la app en uso desde los sitios ya construidos (sin build)")
     ap.add_argument("--desde-cero", action="store_true", help="borra la caché de este proyecto antes de empezar")
     ap.add_argument("--trabajo", help="carpeta de trabajo (por defecto, en la caché del usuario)")
     ap.add_argument("--version", action="version", version=f"cronica {__version__}")
@@ -162,7 +164,13 @@ def _ejecutar(args: argparse.Namespace) -> int:
             estado = json.loads(fichero.read_text(encoding="utf-8")) if fichero.exists() else None
             if estado and estado.get("esquema") != construir.ESQUEMA:
                 estado = None
-            if estado and (estado["ok"] or not args.reintentar):
+            sitio = trabajo / "hitos" / h.sha[:12] / "sitio"
+            if estado and estado["ok"] and args.regrabar and sitio.is_dir():
+                print(cab, end=" ", flush=True)
+                inicio = time.time()
+                estado = construir.regrabar(estado, trabajo, navegador, previas, max_fotogramas)
+                print(f"{_resumen(estado)} (regrabado, {time.time() - inicio:.0f} s)")
+            elif estado and (estado["ok"] or not args.reintentar):
                 print(f"{cab} (caché) {_resumen(estado)}")
             else:
                 print(cab, end=" ", flush=True)
