@@ -49,8 +49,10 @@ def test_detectar_tipos(repo):
         "apps/sb/package.json": json.dumps({"scripts": {"build": "storybook build -o ../../out/sb"}}),
     })
     r = detectar.detectar(repo.raiz, s3)
-    assert (r.tipo, r.dir, r.gestor, r.lock) == ("storybook", "apps/sb", "npm", "package-lock.json")
-    assert r.salidas == ["out/sb"]
+    # Manda el script de la raíz, que orquesta el workspace.
+    assert (r.tipo, r.dir, r.gestor, r.lock) == ("storybook", "", "npm", "package-lock.json")
+    assert r.construir == [["npm", "run", "storybook:build"]]
+    assert "apps/sb/storybook-static" in r.salidas
     assert detectar.detectar(repo.raiz, s2, "storybook") is None
     assert detectar.detectar(repo.raiz, s1, "storybook") is None
 

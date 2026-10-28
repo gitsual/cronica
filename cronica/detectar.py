@@ -101,21 +101,20 @@ def detectar(repo: Path, sha: str, modo: str = "auto") -> Receta | None:
 
 
 def _storybook(paquetes: dict[str, dict], nombres: set[str]) -> Receta | None:
-    # 1. Un script que construye el Storybook (en la raíz primero: en un monorepo suele orquestarlo todo).
+    # 1. Un script que construye el Storybook, paquete a paquete y con la raíz primero: en un monorepo la raíz
+    #    suele orquestar los pasos previos (tokens, librerías) antes de llamar al Storybook del workspace.
+    #    Dentro de un paquete manda el nombre del script (storybook:build, build-storybook) sobre el comando.
     for d, pkg in paquetes.items():
-        for nombre, comando in (pkg.get("scripts") or {}).items():
-            if not isinstance(comando, str):
-                continue
-            if "build-storybook" in comando or re.search(r"storybook\s+build", comando):
-                gestor, lock = _gestor(nombres, d)
-                return Receta("storybook", d, gestor, lock, [_correr(gestor, nombre)], _salida_storybook(comando, d))
-    # 2. Una raíz que delega en un script «storybook:build» o parecido de un workspace.
-    for d, pkg in paquetes.items():
-        for nombre in (pkg.get("scripts") or {}):
-            if re.fullmatch(r"(build[:-]storybook|storybook[:-]build)(:.*)?", nombre):
-                gestor, lock = _gestor(nombres, d)
-                salidas = [posixpath.join(x, "storybook-static") if x else "storybook-static" for x in paquetes]
-                return Receta("storybook", d, gestor, lock, [_correr(gestor, nombre)], salidas)
+        scripts = {k: v for k, v in (pkg.get("scripts") or {}).items() if isinstance(v, str)}
+        por_nombre = sorted((k for k in scripts if re.fullmatch(r"(build[:-]storybook|storybook[:-]build)(:.*)?", k)),
+                            key=lambda k: (k.count(":") + k.count("-"), k))
+        por_comando = [k for k, v in scripts.items() if "build-storybook" in v or re.search(r"storybook\s+build", v)]
+        elegido = (por_nombre or por_comando or [None])[0]
+        if elegido:
+            gestor, lock = _gestor(nombres, d)
+            salidas = _salida_storybook(scripts[elegido], d)
+            salidas += [posixpath.join(x, "storybook-static") if x else "storybook-static" for x in paquetes]
+            return Receta("storybook", d, gestor, lock, [_correr(gestor, elegido)], list(dict.fromkeys(salidas)))
     # 3. Una carpeta .storybook sin script: se llama al CLI directamente.
     for d, pkg in paquetes.items():
         main = [n for n in nombres if n.startswith(posixpath.join(d, ".storybook/main.") if d else ".storybook/main.")]

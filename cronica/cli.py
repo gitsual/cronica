@@ -38,6 +38,9 @@ def _arrastrado() -> bool:
 
 
 def _ffmpeg() -> str | None:
+    junto = Path(sys.executable).parent / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
+    if getattr(sys, "frozen", False) and junto.exists():
+        return str(junto)
     return os.environ.get("CRONICA_FFMPEG") or shutil.which("ffmpeg")
 
 
@@ -79,6 +82,11 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if getattr(sys, "frozen", False) and "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
+        # Empaquetado, Playwright buscaría el navegador dentro del .exe: se usa la caché normal del usuario,
+        # que comparte con tramoya y con cualquier Playwright instalado.
+        base = os.environ.get("LOCALAPPDATA") if sys.platform == "win32" else os.environ.get("XDG_CACHE_HOME")
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(Path(base or Path.home() / ".cache") / "ms-playwright")
     for flujo in (sys.stdout, sys.stderr):
         try:
             flujo.reconfigure(encoding="utf-8", errors="replace")
@@ -114,7 +122,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
     if args.desde_cero and trabajo.exists():
         shutil.rmtree(trabajo, ignore_errors=True)
     trabajo.mkdir(parents=True, exist_ok=True)
-    salida = Path(args.salida).resolve() if args.salida else repo.parent / f"{nombre}-evolucion.mp4"
+    salida = Path(os.path.abspath(args.salida)) if args.salida else repo.parent / f"{nombre}-evolucion.mp4"
     t0 = time.time()
 
     print(f"cronica {__version__} · {repo}")

@@ -41,7 +41,8 @@
     background: var(--bg); border: 2px solid var(--line); }
   #tl .dot.on { border-color: var(--teal); background: var(--teal); }
   .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(14,20,22,.74); text-align: center; }
+    background: rgba(14,20,22,.86); backdrop-filter: blur(8px); text-align: center; }
+  .tile.cubre img { left: 0; top: 0; transform: none; }
   .card h1 { font-size: 84px; letter-spacing: -.02em; }
   .card h1 em { font-style: normal; color: var(--teal); }
   .card p { margin-top: 22px; font-size: 30px; color: var(--muted); }
@@ -103,6 +104,7 @@ async function load () {
     const el = document.createElement('div'); el.className = 'tile'; el.dataset.key = key
     el.innerHTML = '<img class="dark" alt=""><img class="light" alt=""><b></b>'
     el.querySelector('b').textContent = LATEST.at(-1)[key]?.nombre ?? key.split('/').pop()
+    if (LATEST.at(-1)[key]?.cubre) el.classList.add('cubre')
     mosaic.appendChild(el)
   }
   const tl = $('tl')
@@ -188,8 +190,8 @@ function seek (t) {
     el.style.boxShadow = glow ? `0 0 0 2px rgba(0,176,189,${glow}), 0 0 28px rgba(0,176,189,${glow * .6})` : 'none'
     const tile = LATEST[i][key]
     const [dk, lt] = el.querySelectorAll('img')
-    // Cabe entero en la ficha, sin crecer más del doble de su tamaño real.
-    const sc = Math.min((w - 12) / tile.w, (hh - 28) / tile.h, 2)
+    // Un componente cabe entero en la ficha (sin crecer más del doble); una pantalla la llena desde arriba.
+    const sc = tile.cubre ? Math.max(w / tile.w, hh / tile.h) : Math.min((w - 12) / tile.w, (hh - 28) / tile.h, 2)
     for (const im of [dk, lt]) { im.style.width = `${tile.w * sc}px`; im.style.height = `${tile.h * sc}px` }
     if (dk.dataset.src !== (tile.dark || tile.light)) { dk.src = tile.dark || tile.light; dk.dataset.src = dk.src }
     if (lt.dataset.src !== tile.light) { lt.src = tile.light; lt.dataset.src = tile.light }

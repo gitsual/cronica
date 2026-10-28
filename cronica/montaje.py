@@ -35,7 +35,8 @@ def preparar(video: Path, trabajo: Path, proyecto: str, tipo: str, hitos: list[d
         shutil.copy2(origen / f["principal"], destino / "principal.png")
         fichas = []
         for ficha in f["fichas"]:
-            item = {"key": ficha["key"], "nombre": ficha["nombre"], "w": ficha["light"]["w"], "h": ficha["light"]["h"]}
+            item = {"key": ficha["key"], "nombre": ficha["nombre"], "w": ficha["light"]["w"], "h": ficha["light"]["h"],
+                    "cubre": tipo != "storybook"}
             for tema in ("light", "dark"):
                 if ficha.get(tema):
                     shutil.copy2(origen / ficha[tema]["file"], destino / ficha[tema]["file"])
