@@ -10,7 +10,8 @@ except ImportError:  # sin Pillow se compara byte a byte (más estricto: cualqui
 
 UMBRAL_PIXELES = 60      # píxeles que tienen que cambiar: una palabra cambiada ya pasa; Chromium pinta igual
                          # dos veces lo mismo, así que no hay ruido que filtrar
-UMBRAL_TONO = 24         # diferencia por canal (0-255) para contar un píxel como cambiado
+UMBRAL_TONO = 24
+MARCO = "__marco__"      # clave del marco de la herramienta (la barra lateral y la de Storybook)         # diferencia por canal (0-255) para contar un píxel como cambiado
 
 
 def distinta(a: Path, b: Path) -> bool:

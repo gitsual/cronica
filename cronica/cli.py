@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, construir, detectar, historia, montaje, rotulos
+from . import __version__, cambios, construir, detectar, historia, montaje, rotulos
 
 PRESELECCION = 300  # candidatos que se miran como mucho antes de muestrear (detectar cuesta un ls-tree)
 
@@ -184,6 +184,8 @@ def _ejecutar(args: argparse.Namespace) -> int:
                 hechos.append((h, estado))
                 carpeta = trabajo / "hitos" / h.sha[:12]
                 previas.update({f["key"]: carpeta / f["light"]["file"] for f in estado["fotos"]["fichas"]})
+                if (carpeta / "marco.png").exists():
+                    previas[cambios.MARCO] = carpeta / "marco.png"
 
         if len(hechos) < 2:
             print("  Hacen falta al menos dos hitos que se puedan fotografiar. Mira los logs de arriba.")

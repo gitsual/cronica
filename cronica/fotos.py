@@ -153,6 +153,20 @@ def storybook(navegador, base: str, out: Path) -> dict:
             fichas.append(ficha)
     page.close()
 
+    # El marco de Storybook (barra lateral, barra de herramientas): también cambia de un hito a otro.
+    if fichas:
+        marco = navegador.new_page(viewport={"width": 1600, "height": 900})
+        try:
+            primera = next((f["id"] for f in fichas if "foundation" not in f["key"].lower()), fichas[0]["id"])
+            marco.goto(f"{base}/index.html?path=/story/{primera}&panel=false")
+            _asentar(marco, 1200)
+            # Solo el marco: el lienzo del componente se tapa, que ya se compara ficha a ficha.
+            marco.add_style_tag(content="#storybook-preview-wrapper, #storybook-preview-iframe { visibility: hidden !important }")
+            marco.screenshot(path=str(out / "marco.png"))
+        except Exception as error:
+            avisos.append(f"marco: {str(error).splitlines()[0][:100]}")
+        finally:
+            marco.close()
     n_stories = sum(1 for e in entradas if e["type"] == "story")
     variantes: dict[str, list[dict]] = {}
     for e in entradas:

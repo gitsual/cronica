@@ -32,7 +32,7 @@ def preparar(video: Path, trabajo: Path, proyecto: str, tipo: str, hitos: list[d
     for h in hitos:
         rel = f"../hitos/{h['sha'][:12]}"
         f = h["fotos"]
-        nombres = {x["key"]: x["nombre"] for x in f["fichas"]}
+        nombres = {x["key"]: x["nombre"] for x in f["fichas"]} | {"__marco__": "Storybook" if tipo == "storybook" else "Marco"}
         fichas = []
         for ficha in f["fichas"]:
             item = {"key": ficha["key"], "nombre": ficha["nombre"], "w": ficha["light"]["w"], "h": ficha["light"]["h"],

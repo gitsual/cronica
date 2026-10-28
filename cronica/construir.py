@@ -252,10 +252,15 @@ def _rodar(tipo: str, base: str, dir_hito: Path, navegador, previas: dict[str, P
     if not datos or not datos.get("fichas"):
         return datos
     nuevas, cambiadas = cambios.comparar(previas, datos["fichas"], dir_hito)
+    marco, marco_antes = dir_hito / "marco.png", previas.get(cambios.MARCO)
+    if marco.exists() and marco_antes and marco_antes.exists() and cambios.distinta(marco_antes, marco):
+        cambiadas.append(cambios.MARCO)
     datos.update(nuevas=nuevas, cambiadas=cambiadas, sin_cambios=not primero and not nuevas and not cambiadas)
     if datos["sin_cambios"]:
         return datos
-    claves = _focos(tipo, datos, nuevas, cambiadas, primero)
+    claves = _focos(tipo, datos, [k for k in nuevas], [k for k in cambiadas if k != cambios.MARCO], primero)
+    if not claves:  # solo cambia el marco: se recorre con los componentes de siempre
+        claves = _focos(tipo, datos, [], [], True)
     por_clave = {f["key"]: f for f in datos["fichas"]}
     clip = dir_hito / "clip"
     if tipo == "storybook":
