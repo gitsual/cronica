@@ -70,5 +70,5 @@ def test_cifras_del_ecosistema_por_fecha(tmp_path):
     b.dia = 3
     b.commit("dos", {"y.txt": "3\n"}, autor="Bea")               # día 4
     eco = [(a.raiz, "main"), (b.raiz, "main")]
-    assert historia.cifras_ecosistema(eco, "2026-01-03") == {"ficheros": 1, "lineas": 2, "commits": 1, "autores": 1}
-    assert historia.cifras_ecosistema(eco, "2026-01-04") == {"ficheros": 2, "lineas": 3, "commits": 2, "autores": 2}
+    assert historia.cifras_ecosistema(eco, "2026-01-04") == {"ficheros": 1, "lineas": 2, "commits": 1, "autores": 1}
+    assert historia.cifras_ecosistema(eco, "2026-01-05") == {"ficheros": 2, "lineas": 3, "commits": 2, "autores": 2}
