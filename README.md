@@ -33,6 +33,16 @@ cronica C:\proyectos\mi-app
 Todo queda en caché. Si se corta o falla, al relanzar sigue donde lo dejó. Para cambiar un texto, edita
 `rotulos.json` (cronica dice dónde está al terminar) y relanza: solo se vuelve a grabar el vídeo.
 
+## Cómo se ve
+
+El vídeo es un diario del proyecto. Empieza como un noticiario, en sala oscura y con la película a los lados.
+Cada hito es una primera plana: la cabecera con la fecha y «Núm. N de M · commit», un sello rojo que cae al
+entrar, el titular, la app en uso como foto de portada con su pie, «En cifras» y la hemeroteca con todo lo que
+ya salió. Abajo va la tira con las fechas. Se cierra con la última edición y «Fin».
+
+Las letras van con el programa, así que se graba igual sin red: Newsreader, UnifrakturMaguntia e
+IBM Plex Mono, las tres con licencia SIL OFL (`cronica/reproductor/fonts/`).
+
 ## Opciones
 
 | | |

@@ -77,8 +77,13 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
         "ocultar": list(ocultar), "fps_clip": FPS_CLIP, "intro": INTRO_MS, "outro": OUTRO_MS, "hitos": salida,
     }
     (video / "datos.json").write_text(json.dumps(datos, indent=1, ensure_ascii=False), encoding="utf-8")
-    html = resources.files("cronica").joinpath("reproductor/reproductor.html").read_text(encoding="utf-8")
-    (video / "reproductor.html").write_text(html, encoding="utf-8")
+    reproductor = resources.files("cronica").joinpath("reproductor")
+    (video / "reproductor.html").write_text(reproductor.joinpath("reproductor.html").read_text(encoding="utf-8"),
+                                            encoding="utf-8")
+    # Las letras van con el reproductor: el vídeo se graba igual sin red.
+    (video / "fonts").mkdir(exist_ok=True)
+    for f in reproductor.joinpath("fonts").iterdir():
+        (video / "fonts" / f.name).write_bytes(f.read_bytes())
     return datos
 
 
