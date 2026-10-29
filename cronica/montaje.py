@@ -11,6 +11,8 @@ from pathlib import Path
 from .servidor import Servidor
 
 INTRO_MS, OUTRO_MS, EXTRACCION_MS = 2200, 5200, 7500
+# Cómo se ve el vídeo: la primera es la de por defecto (reproductor/esteticas/<nombre>.html).
+ESTETICAS = ("diario", "clasica")
 FPS_CLIP = 30  # los clips se graban a pasos; cada fotograma vale 1/30 s
 
 CIFRAS = {
@@ -28,9 +30,10 @@ def _rel(destino: Path, desde: Path) -> str:
 
 
 def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos: dict,
-             ocultar: tuple[str, ...] = ()) -> dict:
+             ocultar: tuple[str, ...] = (), estetica: str = ESTETICAS[0]) -> dict:
     """escenas: hitos ya grabados ({nn, sha, fecha, chip, titulo, cifras, fotos, dir, cap, barra}) y escenas
     especiales ({tipo: "extraccion", ...}), en orden. `ocultar`: cifras que no salen (p. ej. «lineas»).
+    `estetica`: una de ESTETICAS o la ruta de un .html propio que lea datos.json y exponga seek() como ellas.
 
     El reproductor vive en video/ y lee fotos y clips de la carpeta de trabajo de cada repositorio (no se copia
     nada): las rutas son relativas a video/ y el servidor sirve el antepasado común.
@@ -78,8 +81,8 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
     }
     (video / "datos.json").write_text(json.dumps(datos, indent=1, ensure_ascii=False), encoding="utf-8")
     reproductor = resources.files("cronica").joinpath("reproductor")
-    (video / "reproductor.html").write_text(reproductor.joinpath("reproductor.html").read_text(encoding="utf-8"),
-                                            encoding="utf-8")
+    html = (reproductor.joinpath("esteticas", f"{estetica}.html") if estetica in ESTETICAS else Path(estetica))
+    (video / "reproductor.html").write_text(html.read_text(encoding="utf-8"), encoding="utf-8")
     # Las letras van con el reproductor: el vídeo se graba igual sin red.
     (video / "fonts").mkdir(exist_ok=True)
     for f in reproductor.joinpath("fonts").iterdir():

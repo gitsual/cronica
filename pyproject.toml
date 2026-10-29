@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cronica"
-version = "0.1.0"
+version = "0.2.0"
 description = "El vídeo de cómo evolucionó la interfaz de un proyecto, leyendo su historia git"
 requires-python = ">=3.10"
 dependencies = ["playwright>=1.40", "numpy>=1.24", "pillow>=10"]
@@ -19,4 +19,4 @@ cronica = "cronica.cli:main"
 packages = ["cronica"]
 
 [tool.setuptools.package-data]
-cronica = ["reproductor/*.html", "reproductor/fonts/*"]
+cronica = ["reproductor/esteticas/*.html", "reproductor/fonts/*"]
