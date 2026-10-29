@@ -1,3 +1,5 @@
+<p><img src="assets/cronica.png" width="96" alt="El sello de cronica: una C gótica dentro de un sello rojo"></p>
+
 # cronica
 
 Le das la carpeta de un proyecto y te devuelve el vídeo de cómo fue cambiando su interfaz a lo largo de la
@@ -33,6 +35,22 @@ cronica C:\proyectos\mi-app
 Todo queda en caché. Si se corta o falla, al relanzar sigue donde lo dejó. Para cambiar un texto, edita
 `rotulos.json` (cronica dice dónde está al terminar) y relanza: solo se vuelve a grabar el vídeo.
 
+## Cómo se ve
+
+![Un número del diario: cabecera, sello, titular, la app como foto de portada, «En cifras» y la hemeroteca](assets/diario.jpg)
+
+El vídeo es un diario del proyecto. Empieza como un noticiario, en sala oscura y con la película a los lados.
+Cada hito es una primera plana: la cabecera con la fecha y «Núm. N de M · commit», un sello rojo que cae al
+entrar, el titular, la app en uso como foto de portada con su pie, «En cifras» y la hemeroteca con todo lo que
+ya salió. Abajo va la tira con las fechas. Se cierra con la última edición y «Fin».
+
+<p><img src="assets/noticiario.jpg" width="49%" alt="La entrada: el noticiario en sala oscura"> <img src="assets/ultima.jpg" width="49%" alt="El cierre: la última edición"></p>
+
+Con `--estetica clasica` sale la versión anterior: fondo oscuro, sin cabecera ni sello.
+
+Las letras van con el programa, así que se graba igual sin red: Newsreader, UnifrakturMaguntia e
+IBM Plex Mono, las tres con licencia SIL OFL (`cronica/reproductor/fonts/`).
+
 ## Opciones
 
 | | |
@@ -43,6 +61,7 @@ Todo queda en caché. Si se corta o falla, al relanzar sigue donde lo dejó. Par
 | `--modo storybook\|web\|estatico` | forzar lo que se fotografía |
 | `--ia [modelo]` | rótulos con Ollama (`127.0.0.1:11434`) o con un servidor compatible con OpenAI (`CRONICA_LLM=http://127.0.0.1:1234/v1`). Nada sale de la máquina. |
 | `--musica pista.mp3` / `--sin-musica` | música propia o ninguna |
+| `--estetica diario\|clasica` | cómo se ve el vídeo: el diario (por defecto) o la clásica, oscura y sobria. También vale la ruta de un `.html` propio que lea `datos.json` y exponga `seek()` como los de `cronica/reproductor/esteticas/` |
 | `--segundos 3.6` | duración de cada hito |
 | `--previa` | no graba el vídeo: deja un fotograma por escena para revisar |
 | `--reintentar` | vuelve a construir los hitos que fallaron |

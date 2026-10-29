@@ -93,8 +93,14 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--ocultar", action="append", default=[], metavar="CIFRA",
                     choices=("componentes", "pantallas", "stories", "ficheros", "lineas", "commits", "autores"),
                     help="una cifra que no sale en el vídeo (se puede repetir): p. ej. --ocultar lineas")
+    ap.add_argument("--estetica", default=montaje.ESTETICAS[0], metavar="NOMBRE",
+                    help="cómo se ve el vídeo: " + " o ".join(montaje.ESTETICAS) +
+                         f" (por defecto, {montaje.ESTETICAS[0]}), o la ruta de un .html propio")
     ap.add_argument("--version", action="version", version=f"cronica {__version__}")
-    return ap.parse_args(argv)
+    args = ap.parse_args(argv)
+    if args.estetica not in montaje.ESTETICAS and not Path(args.estetica).is_file():
+        ap.error(f"--estetica: «{args.estetica}» no es {' ni '.join(montaje.ESTETICAS)} ni un .html que exista")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -214,7 +220,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
                 escenas.append(paseo)
         textos = _textos(trabajo, [c.trabajo for c in capitulos], nombre, escenas, args)
         tipo = capitulos[0].tipo
-        video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos, tuple(args.ocultar))
+        video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos, tuple(args.ocultar), args.estetica)
         duracion = montaje.duracion_ms(video)
 
         if args.previa:

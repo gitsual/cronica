@@ -64,7 +64,9 @@ def test_sin_interfaz(repo, tmp_path, monkeypatch, capsys):
     assert "solo hace vídeos de proyectos con interfaz" in capsys.readouterr().out
 
 
-def test_no_es_repo(tmp_path):
+def test_no_es_repo(tmp_path, monkeypatch):
+    # Que git no suba a buscar un repositorio por encima (en algunos equipos la carpeta temporal está dentro de uno).
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
     assert main([str(tmp_path)]) == 2
 
 

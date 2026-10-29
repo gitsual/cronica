@@ -25,7 +25,7 @@ CURSOR = """(() => {
     const r = document.createElement('div');
     r.id = '__cronica_onda';
     r.style.cssText = 'position:fixed;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;' +
-      'border:3px solid #00b0bd;z-index:2147483646;pointer-events:none;opacity:0';
+      'border:3px solid #b3301c;z-index:2147483646;pointer-events:none;opacity:0';
     document.documentElement.append(r, c);
   };
   window.__cronica = (x, y, onda) => {
