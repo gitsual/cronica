@@ -90,6 +90,9 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
                     help="un repositorio que no sale en pantalla pero cuenta en las cifras (carpeta o carpeta@rama)")
     ap.add_argument("--paseo", nargs="?", type=float, const=60.0, metavar="SEGUNDOS",
                     help="al final, un paseo por todos los componentes cambiando los temas de la barra (60 s)")
+    ap.add_argument("--ocultar", action="append", default=[], metavar="CIFRA",
+                    choices=("componentes", "pantallas", "stories", "ficheros", "lineas", "commits", "autores"),
+                    help="una cifra que no sale en el vídeo (se puede repetir): p. ej. --ocultar lineas")
     ap.add_argument("--version", action="version", version=f"cronica {__version__}")
     return ap.parse_args(argv)
 
@@ -211,7 +214,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
                 escenas.append(paseo)
         textos = _textos(trabajo, [c.trabajo for c in capitulos], nombre, escenas, args)
         tipo = capitulos[0].tipo
-        video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos)
+        video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos, tuple(args.ocultar))
         duracion = montaje.duracion_ms(video)
 
         if args.previa:
@@ -415,6 +418,7 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
     fichero = trabajo / "rotulos.json"
     guardado = json.loads(fichero.read_text(encoding="utf-8")) if fichero.exists() else {}
     por_clave = guardado.get("rotulos", {})
+    notas = guardado.get("notas", {})
     titulo, cierre = guardado.get("titulo"), guardado.get("cierre", "")
     for otro in otros:
         f = otro / "rotulos.json"
@@ -422,6 +426,8 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
             previo = json.loads(f.read_text(encoding="utf-8"))
             for k, v in previo.get("rotulos", {}).items():
                 por_clave.setdefault(k, v)
+            for k, v in previo.get("notas", {}).items():
+                notas.setdefault(k, v)
             titulo = titulo or previo.get("titulo")
             cierre = cierre or previo.get("cierre", "")
     titulo = titulo or nombre
@@ -438,6 +444,8 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
             print(f"no ha podido ({str(error)[:120]}); uso los títulos de los commits")
     for e in escenas:
         por_clave.setdefault(_clave(e), e["titulo"])
-    fichero.write_text(json.dumps({"titulo": titulo, "cierre": cierre, "rotulos": por_clave}, indent=1,
+    # «notas»: una línea opcional por escena, el porqué del cambio, como subtítulo (mismas claves que «rotulos»).
+    fichero.write_text(json.dumps({"titulo": titulo, "cierre": cierre, "rotulos": por_clave, "notas": notas}, indent=1,
                                   ensure_ascii=False), encoding="utf-8")
-    return {"titulo": titulo, "cierre": cierre, "rotulos": {e["nn"]: por_clave[_clave(e)] for e in escenas}}
+    return {"titulo": titulo, "cierre": cierre, "rotulos": {e["nn"]: por_clave[_clave(e)] for e in escenas},
+            "notas": {e["nn"]: notas[_clave(e)] for e in escenas if notas.get(_clave(e))}}

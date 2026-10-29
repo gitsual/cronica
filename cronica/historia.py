@@ -220,7 +220,7 @@ def extraccion(repo_a: Path, sha_a: str, repo_b: Path, sha_b: str) -> dict:
         carpetas[clave] = carpetas.get(clave, 0) + 1
     paso = max(1, len(origen) // 36)
     return {
-        "ficheros": len(mudan), "ficheros_b": len(b),
+        "ficheros": len(mudan), "ficheros_a": len(a), "ficheros_b": len(b),
         "lineas_mudan": _lineas_blobs(repo_b, [b[d] for _, d in mudan]),
         "lineas_a": cifras_git(repo_a, sha_a)["lineas"], "lineas_b": cifras_git(repo_b, sha_b)["lineas"],
         "carpetas": sorted(carpetas.items(), key=lambda x: -x[1])[:6],

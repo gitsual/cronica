@@ -32,7 +32,7 @@
   #shot { position: absolute; left: 0; top: 38px; width: 1422px; height: 800px; overflow: hidden; background: #fff; }
   #shot img { position: absolute; left: 0; top: 0; width: 1422px; height: 800px; }
   #ext { position: absolute; inset: 0; background: radial-gradient(900px 500px at 50% 40%, #15262b, #0d1517); display: none; overflow: hidden; }
-  #ext .repo { position: absolute; top: 70px; width: 470px; height: 600px; border: 1px solid var(--line); border-radius: 14px;
+  #ext .repo { position: absolute; top: 60px; width: 470px; height: 530px; border: 1px solid var(--line); border-radius: 14px;
     background: rgba(23,32,36,.92); padding: 26px 28px; }
   #ext .repo h3 { font: 600 24px ui-monospace, "JetBrains Mono", monospace; color: var(--ink); }
   #ext .repo .n { margin-top: 18px; font-size: 54px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -43,9 +43,15 @@
   #ext .repo li.va { background: rgba(0,176,189,.14); color: var(--ink); }
   #ext .vuela { position: absolute; font: 14px ui-monospace, monospace; color: var(--ink); white-space: nowrap;
     padding: 4px 10px; border-radius: 6px; background: rgba(0,176,189,.22); border: 1px solid rgba(0,176,189,.5); }
-  #ext .pie { position: absolute; left: 0; right: 0; bottom: 46px; text-align: center; font-size: 26px; color: var(--muted); }
+  #ext .pie { position: absolute; left: 0; right: 0; top: 620px; text-align: center; font-size: 26px; color: var(--muted); }
   #ext .pie b { color: var(--teal); }
   #ext .flecha { position: absolute; left: 600px; top: 330px; width: 222px; height: 4px; background: linear-gradient(90deg, transparent, var(--teal)); }
+  /* La nota de la escena: el porqué, en una línea, como un subtítulo sobre la app. */
+  #nota { position: absolute; left: 64px; width: 1424px; top: 892px; display: flex; justify-content: center; pointer-events: none; }
+  #nota span { max-width: 1240px; padding: 14px 28px; border-radius: 14px; background: rgba(10,16,18,.86);
+    border: 1px solid rgba(0,176,189,.45); box-shadow: 0 12px 40px rgba(0,0,0,.45); font-size: 29px; line-height: 1.3;
+    text-align: center; color: var(--ink); }
+  #nota:empty, #nota span:empty { display: none; }
   #lado { position: absolute; left: 1520px; top: 162px; width: 336px; }
   .cifra { display: flex; align-items: baseline; gap: 12px; height: 54px; border-bottom: 1px solid var(--line); }
   .cifra .n { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 150px; text-align: right; }
@@ -79,6 +85,7 @@
   <header><div id="fecha"></div><div id="chip"></div><div id="rotulo"></div></header>
   <div id="browser"><div class="bar"><i></i><i></i><i></i><span id="url"></span><div id="badge"><b></b><em></em></div></div>
     <div id="shot"><img id="a" alt=""><img id="b" alt=""><div id="ext"></div></div></div>
+  <div id="nota"><span></span></div>
   <div id="lado"></div>
   <div id="mosaic"></div>
   <div id="tl"><div class="fill"></div></div>
@@ -197,6 +204,11 @@ function seek (t) {
   $('fecha').textContent = fecha(h.fecha)
   $('chip').textContent = h.chip
   const r = $('rotulo'); if (r.dataset.nn !== h.nn) { r.dataset.nn = h.nn; r.textContent = h.rotulo; encajar(r, 1424) }
+  const nota = $('nota').firstChild
+  if (nota.dataset.nn !== h.nn) { nota.dataset.nn = h.nn; nota.textContent = h.nota || '' }
+  // Se lee en unos segundos y se quita, para no tapar la app.
+  const kn = ease((local - 500) / 500) * clamp((Math.min(h.dur, 7500) - local) / 400)
+  nota.style.opacity = kn; nota.style.transform = `translateY(${lerp(16, 0, kn)}px)`
   const kr = ease(local / 450)
   r.style.opacity = kr; r.style.transform = `translateX(${lerp(-26, 0, kr)}px)`
 
@@ -269,6 +281,7 @@ function seek (t) {
   const browser = $('browser')
   browser.style.opacity = 1 - out; browser.style.transform = `scale(${lerp(1, .92, out)})`
   $('lado').style.opacity = 1 - out; document.querySelector('header').style.opacity = 1 - out
+  $('nota').style.opacity = 1 - out
   const ko = ease((outroT - 1900) / 600)
   $('outro').style.opacity = ko
   $('outroh').style.transform = `translateY(${lerp(30, 0, ko)}px)`
@@ -288,11 +301,12 @@ function extraccion (h, t) {
   if (ext.dataset.nn !== h.nn) {
     ext.dataset.nn = h.nn
     const carpetas = h.carpetas.map(([c, n]) => `<li data-c="${esc(c)}"><span>${esc(c)}/</span><span>${n}</span></li>`).join('')
+    const lineas = !(D.ocultar || []).includes('lineas')
     ext.innerHTML = `
-      <div class="repo" style="left:60px"><h3>${esc(h.de)}</h3><div class="n">${num(h.lineas_a)}</div><div class="l">líneas</div>
+      <div class="repo" style="left:60px"><h3>${esc(h.de)}</h3><div class="n">${num(lineas ? h.lineas_a : h.ficheros_a)}</div><div class="l">${lineas ? 'líneas' : 'ficheros'}</div>
         <ul>${carpetas}</ul></div>
       <div class="flecha"></div>
-      <div class="repo" style="left:892px"><h3>${esc(h.a)}</h3><div class="n" id="extn">0</div><div class="l">líneas al llegar</div>
+      <div class="repo" style="left:892px"><h3>${esc(h.a)}</h3><div class="n" id="extn">0</div><div class="l">${lineas ? 'líneas al llegar' : 'ficheros al llegar'}</div>
         <ul id="extl"></ul></div>
       <div class="pie"></div>` + h.muestra.map((m, j) => `<div class="vuela" data-j="${j}">${esc(m.split('/').slice(-2).join('/'))}</div>`).join('')
     EXT[h.nn] = { vuelos: [...ext.querySelectorAll('.vuela')], llegados: [] }
@@ -311,10 +325,11 @@ function extraccion (h, t) {
   const volando = h.muestra.filter((m, j) => t > salidas[j] && t < salidas[j] + vuelo)
   ext.querySelectorAll('.repo li[data-c]').forEach(li => li.classList.toggle('va', volando.some(m => m.startsWith(li.dataset.c))))
   const kl = clamp((t - ini) / (fin - ini))
-  $('extn').textContent = num(h.lineas_b * ease(kl))
+  const lineas = !(D.ocultar || []).includes('lineas')
+  $('extn').textContent = num((lineas ? h.lineas_b : h.ficheros_b) * ease(kl))
   $('extl').innerHTML = h.muestra.slice(0, llegados).slice(-9).map(m => `<li class="va"><span>${esc(m.split('/').pop())}</span></li>`).join('')
   ext.querySelector('.pie').innerHTML = t > fin - 300
-    ? `<b>${h.ficheros}</b> de los ${h.ficheros_b} ficheros llegan idénticos · <b>${num(h.lineas_mudan)}</b> líneas que ya existían`
+    ? `<b>${h.ficheros}</b> de los ${h.ficheros_b} ficheros llegan idénticos` + (lineas ? ` · <b>${num(h.lineas_mudan)}</b> líneas que ya existían` : '')
     : (n => `${num(n)} fichero${n === 1 ? "" : "s"}…`)(Math.round(h.ficheros * kl))
   ext.querySelector('.pie').style.opacity = ease((t - ini) / 500)
 }
