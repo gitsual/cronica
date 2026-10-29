@@ -136,11 +136,14 @@ def _trabajo_de(repo: Path) -> Path:
 
 
 def _carpeta_y_rama(texto: str) -> tuple[Path, str | None]:
-    """«ruta@rama» o solo «ruta». La @ solo cuenta en el último tramo de la ruta."""
-    base, _, cola = texto.replace("\\", "/").rpartition("/")
-    if "@" in cola:
-        nombre, rama = cola.split("@", 1)
-        return Path((base + "/" if base else "") + nombre).expanduser().resolve(), rama
+    """«ruta@rama» o solo «ruta». La rama puede llevar barras (feat/x); la @ que cuenta es la que deja
+    a su izquierda una carpeta que existe."""
+    if Path(texto).expanduser().is_dir():
+        return Path(texto).expanduser().resolve(), None
+    for i in [i for i, ch in enumerate(texto) if ch == "@"]:
+        carpeta = Path(texto[:i]).expanduser()
+        if i and carpeta.is_dir():
+            return carpeta.resolve(), texto[i + 1:] or None
     return Path(texto).expanduser().resolve(), None
 
 
@@ -201,7 +204,9 @@ def _ejecutar(args: argparse.Namespace) -> int:
             acompanantes.append((raiz, rama or historia.rama_actual(raiz)))
         escenas = _escenas(capitulos, acompanantes)
         if args.paseo:
-            paseo = _paseo(capitulos[-1], trabajo, navegador, args, len(escenas) + 1)
+            ecosistema = [(c.repo, c.rama) for c in capitulos] + acompanantes
+            paseo = _paseo(capitulos[-1], trabajo, navegador, args, len(escenas) + 1,
+                           ecosistema if len(ecosistema) > 1 else None)
             if paseo:
                 escenas.append(paseo)
         textos = _textos(trabajo, [c.trabajo for c in capitulos], nombre, escenas, args)
@@ -334,8 +339,10 @@ def _escenas(capitulos: list[Capitulo], acompanantes: list[tuple[Path, str]] | N
     return escenas
 
 
-def _paseo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n: int) -> dict | None:
-    """Una última escena por todo lo que hay al final, cambiando los temas desde la barra de Storybook."""
+def _paseo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n: int,
+           ecosistema: list[tuple[Path, str]] | None = None) -> dict | None:
+    """Una última escena por todo lo que hay al final, cambiando los temas desde la barra de Storybook.
+    Lleva la fecha y las cifras del último commit (de todos los repositorios juntos, si hay varios)."""
     if cap.tipo != "storybook" or not cap.hechos:
         return None
     h, estado = cap.hechos[-1]
@@ -350,8 +357,11 @@ def _paseo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n:
                                      carpeta / "clip", int(args.paseo * montaje.FPS_CLIP))
     print(f"{fotogramas / montaje.FPS_CLIP:.0f} s")
     fotos = {**estado["fotos"], "fotogramas": fotogramas, "nuevas": [], "cambiadas": []}
-    return {"nn": f"{n:02d}", "sha": h.sha, "fecha": h.fecha, "dir_clip": str(carpeta), "chip": f"{len(fichas)} componentes · {cap.nombre}",
-            "titulo": f"Todo junto: {len(fichas)} componentes", "cifras": historia.cifras_git(cap.repo, h.sha),
+    ultimo = cap.todos[-1]
+    cifras = (historia.cifras_ecosistema(ecosistema, ultimo.fecha) if ecosistema
+              else historia.cifras_git(cap.repo, ultimo.sha))
+    return {"nn": f"{n:02d}", "sha": h.sha, "fecha": ultimo.fecha, "dir_clip": str(carpeta), "chip": f"{len(fichas)} componentes · {cap.nombre}",
+            "titulo": f"Todo junto: {len(fichas)} componentes", "cifras": cifras,
             "fotos": fotos, "dir": str(cap.trabajo), "cap": len(args.carpetas) - 1,
             "barra": f"storybook · {cap.nombre}", "commits": [], "paseo": True}
 

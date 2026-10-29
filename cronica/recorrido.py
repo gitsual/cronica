@@ -322,9 +322,9 @@ def _conmutadores(page) -> list[dict]:
     """Los menús de la barra de Storybook que cambian un «global» (tema, diseño…): botón y opciones."""
     try:
         return page.evaluate("""() => {
-          const tipos = window.__STORYBOOK_PREVIEW__?.storyStoreValue?.userGlobals?.globalTypes
-            || document.querySelector('#storybook-preview-iframe')?.contentWindow?.__STORYBOOK_PREVIEW__?.storyStoreValue?.userGlobals?.globalTypes
-            || {};
+          const almacen = (window.__STORYBOOK_PREVIEW__
+            || document.querySelector('#storybook-preview-iframe')?.contentWindow?.__STORYBOOK_PREVIEW__)?.storyStoreValue;
+          const tipos = almacen?.userGlobals?.globalTypes || almacen?.projectAnnotations?.globalTypes || {};
           return Object.entries(tipos).filter(([, t]) => t.toolbar && (t.toolbar.items || []).length > 1).map(([k, t]) => ({
             clave: k, titulo: t.toolbar.title || t.description || k, descripcion: t.description || '',
             opciones: t.toolbar.items.map(i => typeof i === 'string' ? { valor: i, titulo: i } : { valor: i.value, titulo: i.title || i.value }),
@@ -340,7 +340,8 @@ def _boton_de(page, c: dict):
     for texto in candidatos:
         if not texto:
             continue
-        for sel in (f"button[title='{texto}']", f"button[aria-label='{texto}']"):
+        # Storybook 9+: aria-label = «descripción + opción activa».
+        for sel in (f"button[title='{texto}']", f"button[aria-label='{texto}']", f"button[aria-label^='{texto} ']"):
             h = page.query_selector(sel)
             if h and _caja(h):
                 return h

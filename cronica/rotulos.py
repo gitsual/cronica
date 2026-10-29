@@ -52,6 +52,7 @@ def limpiar(titulo: str) -> str:
     t = partes[-1] if partes else titulo
     t = re.sub(r"^(?:feature|feat|fix|bugfix|hotfix|chore|release)/", "", t, flags=re.I)
     t = CLAVE.sub("", t)
+    t = re.sub(r"\s*[(\[]\s*[)\]]", "", t)                        # «(TIENDA-482)» deja «()»
     t = re.sub(r"^\s*\w+(?:\([^)]*\))?!?:\s*", "", t)          # feat(x): …
     if " " not in t.strip():                                    # un nombre de rama: add-login-page
         t = re.sub(r"[-_]+", " ", t.split("/")[-1])

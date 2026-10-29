@@ -38,3 +38,7 @@ def test_chip_y_clave():
     commit = c("Pull request #38: TIENDA-482 | Navbar", tags=["v1.0"])
     assert clave(commit) == "TIENDA-482"
     assert chip(commit) == "#38 · TIENDA-482 · v1.0 · aaaaaaa"
+
+
+def test_clave_entre_parentesis_no_deja_parentesis_vacios():
+    assert limpiar("ci(storybook): a job that follows the releases (TIENDA-482)") == "A job that follows the releases"
