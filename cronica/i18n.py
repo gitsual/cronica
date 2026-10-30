@@ -223,6 +223,7 @@ EN = {
     "La redacción está en {u} (cierra la ventana para terminar).":
         "The newsroom is at {u} (close the window to finish).",
     "Pulsa Intro cuando hayas terminado…": "Press Enter when you are done…",
+    "No he podido abrir la ventana ({e}); la abro en tu navegador.": "Could not open the window ({e}); opening it in your browser.",
     "la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio":
         "the music: a generated style (console, the default; newsreel; ambient) or an audio file of your own",
     "sin música": "no music",

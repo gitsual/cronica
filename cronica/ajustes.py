@@ -121,7 +121,10 @@ class _Redaccion(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(cuerpo)))
         self.end_headers()
-        self.wfile.write(cuerpo)
+        try:
+            self.wfile.write(cuerpo)
+        except OSError:
+            pass   # la ventana se cerró a media respuesta
 
     def _fichero(self, recurso, tipo: str) -> None:
         cuerpo = recurso.read_bytes()
@@ -160,11 +163,18 @@ class _Redaccion(http.server.BaseHTTPRequestHandler):
         self.send_error(404)
 
 
+class _Servidor(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        pass   # una conexión cortada por la ventana no es un error que enseñar en la consola
+
+
 class Redaccion:
     """El servidor de la ventana de ajustes, en un puerto libre de 127.0.0.1."""
 
     def __init__(self):
-        self._srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Redaccion)
+        self._srv = _Servidor(("127.0.0.1", 0), _Redaccion)
         self.url = f"http://127.0.0.1:{self._srv.server_address[1]}/"
         threading.Thread(target=self._srv.serve_forever, daemon=True).start()
 
@@ -199,7 +209,8 @@ def abrir_ventana() -> int:
                 pagina.goto(srv.url)
             pagina.wait_for_event("close", timeout=0)
             ctx.close()
-    except Exception:
+    except Exception as error:
+        print(_("No he podido abrir la ventana ({e}); la abro en tu navegador.", e=str(error).splitlines()[0][:200]))
         import webbrowser
         webbrowser.open(srv.url)
         try:
