@@ -1,9 +1,9 @@
 """Las imágenes del README: logotipo, el proceso, la gráfica del ejemplo, la terminal, la música y las galeradas.
 
-    python examples/huerto/construir.py huerto
-    CRONICA_CACHE=cache cronica huerto > huerto.log
-    CRONICA_CACHE=cache cronica huerto --previa
-    python assets/readme/construir.py huerto cache/huerto-<hash> huerto.log
+    python examples/garden/construir.py garden
+    CRONICA_CACHE=cache cronica garden > garden.log
+    CRONICA_CACHE=cache cronica garden --preview
+    python assets/readme/construir.py garden cache/garden-<hash> garden.log
 
 Todo sale de la ejecución real del ejemplo: las cifras, la salida de la terminal y los fotogramas. Se dibuja con
 las mismas letras que el vídeo y el mismo papel, tinta y sello.
@@ -112,11 +112,11 @@ p{{font:italic 400 18px/1.35 News;color:{GASTADA};min-height:122px}} .mod{{font-
 .fin{{display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:3px double {TINTA};padding-left:18px}}
 </style>
 <div class="hoja">
-  <div class="cab"><div style="font:44px Gotica">Cómo se hace un número</div>
-  <div class="mono" style="font-size:13px">How every issue of the newsreel is made</div></div>
+  <div class="cab"><div style="font:44px Gotica">How an issue is made</div>
+  <div class="mono" style="font-size:13px">From a git history to a newsreel, in seven steps</div></div>
   <div class="doble" style="margin-top:12px"></div>
   <div class="fila">{columnas}
-    <div class="fin"><img src="{sello_uri(256)}" style="width:110px"><div class="mono" style="font-size:12px;margin-top:12px;text-align:center">&lt;folder&gt;-<br>evolucion.mp4</div></div>
+    <div class="fin"><img src="{sello_uri(256)}" style="width:110px"><div class="mono" style="font-size:12px;margin-top:12px;text-align:center">&lt;folder&gt;-<br>evolution.mp4</div></div>
   </div>
   <div class="doble" style="margin-top:22px"></div>
   <div class="mono" style="font-size:11px;margin-top:10px;color:{GASTADA}">Everything is cached per issue · interrupted runs resume where they stopped · editing a headline only re-prints the film</div>
@@ -187,19 +187,20 @@ def grafica(imp: Imprenta, repo: Path, publicados: set[str]) -> None:
 def terminal(imp: Imprenta, log: Path, proyecto: str, tmp: Path) -> None:
     texto = log.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
     ruta = re.search(r"^(\S:\\.*?\\" + re.escape(proyecto) + r")$", texto, re.M).group(1)
-    texto = texto.replace(ruta, r"C:\proyectos\huerto")
+    carpeta = "C:\\projects\\" + proyecto
+    texto = texto.replace(ruta, carpeta)
     texto = re.sub(r"\S:\\[^\s]*\\cache\\", r"%LOCALAPPDATA%\\cronica\\", texto)
-    texto = re.sub(r"\S:\\[^\s]*?\\(huerto-\w+\.mp4)", r"C:\\proyectos\\huerto-evolucion.mp4", texto)
+    texto = re.sub(r"\S:\\[^\s]*?\\(" + re.escape(proyecto) + r"-[\w-]+\.mp4)", lambda m: "C:\\projects\\" + m.group(1), texto)
     lineas = [l for l in texto.split("\n")]
     estados: list[tuple[list[str], float]] = []
     vistas: list[str] = []
-    orden = "cronica C:\\proyectos\\huerto"
+    orden = "cronica " + carpeta
     for k in range(0, len(orden) + 1, 2):
         estados.append(([f"$ {orden[:k]}▌"], 0.06))
     estados.append(([f"$ {orden}"], 0.5))
     vistas.append(f"$ {orden}")
     for l in lineas:
-        if "grabando" in l:
+        if "recording" in l:
             for paso in [p for p in l.split("\r") if p.strip()]:
                 estados.append((vistas + [paso.rstrip()], 0.35))
             vistas.append([p for p in l.split("\r") if p.strip()][-1].rstrip())
@@ -210,10 +211,10 @@ def terminal(imp: Imprenta, log: Path, proyecto: str, tmp: Path) -> None:
 
     def pintar(l: str) -> str:
         l = l.replace("&", "&amp;").replace("<", "&lt;")
-        l = re.sub(r"(sin cambios a la vista: no sale)", rf"<span style='color:{GASTADA}'>\1</span>", l)
+        l = re.sub(r"(nothing changes on screen: no page)", rf"<span style='color:{GASTADA}'>\1</span>", l)
         l = re.sub(r"\bok\b", rf"<b style='color:{SELLO_NEGRO}'>ok</b>", l)
         l = re.sub(r"^\$ ", rf"<span style='color:{SELLO_NEGRO}'>$</span> ", l)
-        l = re.sub(r"^(Hecho.*)$", r"<b>\1</b>", l)
+        l = re.sub(r"^(Done.*)$", r"<b>\1</b>", l)
         return l
 
     lista = []

@@ -8,6 +8,8 @@ import subprocess
 from importlib import resources
 from pathlib import Path
 
+from . import i18n
+from .i18n import _
 from .servidor import Servidor
 
 INTRO_MS, OUTRO_MS, EXTRACCION_MS, ACTO_MS = 2200, 5200, 7500, 3400
@@ -50,10 +52,10 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
             continue
         rel = _rel(Path(h["dir"]) / "hitos" / h["sha"][:12], video) if h.get("sha") else _rel(Path(h["dir"]), video)
         f = h["fotos"]
-        nombres = {x["key"]: x["nombre"] for x in f["fichas"]} | {"__marco__": "Storybook" if tipo == "storybook" else "Marco"}
+        nombres = {x["key"]: _(x["nombre"]) for x in f["fichas"]} | {"__marco__": "Storybook" if tipo == "storybook" else _("Marco")}
         fichas = []
         for ficha in f["fichas"]:
-            item = {"key": f"{h['cap']}:{ficha['key']}", "nombre": ficha["nombre"], "w": ficha["light"]["w"],
+            item = {"key": f"{h['cap']}:{ficha['key']}", "nombre": _(ficha["nombre"]), "w": ficha["light"]["w"],
                     "h": ficha["light"]["h"], "cubre": tipo != "storybook"}
             for tema in ("light", "dark"):
                 if ficha.get(tema):
@@ -81,8 +83,15 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
         e["inicio"] = t
         t += e["dur"]
     ultimo = next((e["cifras"] for e in reversed(salida) if e["cifras"]), {})
-    definicion = [[k, l] for k, l in CIFRAS[tipo] if ultimo.get(k) and k not in ocultar]
+    definicion = [[k, _(l)] for k, l in CIFRAS[tipo] if ultimo.get(k) and k not in ocultar]
+    for e in salida:
+        e["fecha_larga"], e["fecha_corta"] = i18n.fecha_larga(e["fecha"]), i18n.fecha_corta(e["fecha"])
+    fechas = {}
+    if salida:
+        a, z = salida[0]["fecha"], salida[-1]["fecha"]
+        fechas = {"rango": i18n.rango(a, z), "lapso": i18n.lapso(a, z), "final": i18n.fecha_sin_dia(z)}
     datos = {
+        **i18n.reproductor(), **fechas,
         "proyecto": proyecto, "titulo": textos.get("titulo") or proyecto, "cierre": textos.get("cierre") or "",
         "pie": textos.get("pie") or "",
         "barra": f"{'storybook' if tipo == 'storybook' else 'localhost'} · {proyecto}", "cifras": definicion,
@@ -143,11 +152,11 @@ def renderizar(navegador, video: Path, salida: Path, fps: int, audio: Path | Non
             page.evaluate(f"seek({f * 1000 / fps})")
             ff.stdin.write(page.screenshot(type="jpeg", quality=92))
             if f % (fps * 10) == 0:
-                print(f"\r  grabando {f * 100 // total:3d} %", end="", flush=True)
+                print(_("\r  grabando {p} %", p=f"{f * 100 // total:3d}"), end="", flush=True)
         ff.stdin.close()
         if ff.wait():
-            raise RuntimeError("ffmpeg falló al codificar el vídeo")
-        print("\r  grabando 100 %")
+            raise RuntimeError(_("ffmpeg falló al codificar el vídeo"))
+        print(_("\r  grabando 100 %"))
     finally:
         page.close()
         srv.__exit__()
@@ -158,7 +167,7 @@ def renderizar(navegador, video: Path, salida: Path, fps: int, audio: Path | Non
                             "-af", f"afade=t=out:st={max(0, total / fps - 3):.2f}:d=3", "-shortest",
                             "-movflags", "+faststart", str(salida)], capture_output=True, text=True)
         if r.returncode:
-            raise RuntimeError(f"ffmpeg falló al poner la música: {r.stderr.strip()[-400:]}")
+            raise RuntimeError(_("ffmpeg falló al poner la música: {e}", e=r.stderr.strip()[-400:]))
         mudo.unlink()
     else:
         shutil.move(str(mudo), str(salida))

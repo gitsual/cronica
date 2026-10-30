@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cronica"
-version = "0.3.0"
-description = "El vídeo de cómo evolucionó la interfaz de un proyecto, leyendo su historia git"
+version = "0.4.0"
+description = "The film of how the interface of a project evolved, read from its git history (English and Spanish)"
 requires-python = ">=3.10"
 dependencies = ["playwright>=1.40", "numpy>=1.24", "pillow>=10"]
 

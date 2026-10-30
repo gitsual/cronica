@@ -13,11 +13,11 @@ This one is written by your git history, and the photographs are taken by a brow
 <p><strong>Give it the folder of a project with an interface.<br>It hands back the film of how that interface grew: one front page per pull request.</strong></p>
 
 <p>
-  <img alt="version 0.3.0" src="https://img.shields.io/badge/version-0.3.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="version 0.4.0" src="https://img.shields.io/badge/version-0.4.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
-  <img alt="35 tests" src="https://img.shields.io/badge/tests-35-191612?style=for-the-badge&labelColor=191612&color=B3301C">
-  <img alt="runs offline" src="https://img.shields.io/badge/runs-offline-191612?style=for-the-badge&labelColor=191612&color=5A5247">
-  <img alt="1080p, 30 fps" src="https://img.shields.io/badge/1080p-30%20fps-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="41 tests" src="https://img.shields.io/badge/tests-41-191612?style=for-the-badge&labelColor=191612&color=5A5247">
+  <img alt="runs offline" src="https://img.shields.io/badge/runs-offline-191612?style=for-the-badge&labelColor=191612&color=B3301C">
 </p>
 
 <a href="#the-example"><strong>The example</strong></a> ·
@@ -26,6 +26,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <a href="#how-an-issue-is-made"><strong>How it works</strong></a> ·
 <a href="#what-makes-the-news"><strong>What makes the news</strong></a> ·
 <a href="#music"><strong>Music</strong></a> ·
+<a href="#languages"><strong>Languages</strong></a> ·
 <a href="#options"><strong>Options</strong></a> ·
 <a href="#the-news-desk-rotulosjson"><strong>News desk</strong></a> ·
 <a href="#a-guided-demo-at-the-end"><strong>Guided demo</strong></a> ·
@@ -39,13 +40,14 @@ This one is written by your git history, and the photographs are taken by a brow
 ---
 
 <p align="center">
-  <a href="assets/video/huerto-diario.mp4"><img src="assets/gifs/diario.gif" alt="The film of the example project: the newsreel opening in a dark room, then one front page per pull request with the stamp falling, the headline, the app in use as the photograph, the figures and the archive" width="100%"></a>
+  <a href="assets/video/garden-newspaper.mp4"><img src="assets/gifs/newspaper.gif" alt="The film of the example project: the newsreel opening in a dark room, then one front page per pull request with the stamp falling, the headline, the app in use as the photograph, the figures and the archive" width="100%"></a>
 </p>
 
 <p align="center"><sub>Preview without sound.
-<a href="assets/video/huerto-diario.mp4"><b>The whole film with music</b></a> (0:41) ·
-<a href="assets/video/huerto-clasica.mp4"><b>The same history, classic look</b></a> (0:41).
-Nobody edited either of them: <code>cronica huerto</code> made them from the folder.</sub></p>
+<a href="assets/video/garden-newspaper.mp4"><b>The whole film with music</b></a> (0:41) ·
+<a href="assets/video/garden-classic.mp4"><b>The same history, classic look</b></a> (0:41) ·
+<a href="assets/video/huerto-diario.mp4"><b>En español</b></a> (0:41).
+Nobody edited any of them: <code>cronica garden</code> made them from the folder.</sub></p>
 
 ## What it is
 
@@ -57,13 +59,13 @@ Crónica reads that history and photographs it. It walks the branch, builds ever
 opens each one in a browser, uses it with a visible cursor, compares it with the one before, and prints the result as
 a newspaper: one issue per pull request, the app in use as the front-page photo, the headline taken from the PR title,
 the figures climbing in the margin and the archive of every screen already published. It opens like a cinema newsreel
-and closes with the last edition.
+and closes with the final edition.
 
 ```
 cronica C:\projects\my-app
 ```
 
-…or drag the folder onto `cronica.exe`. The film is saved next to the project as `my-app-evolucion.mp4`.
+…or drag the folder onto `cronica.exe`. The film is saved next to the project as `my-app-evolution.mp4`.
 
 | | |
 |---|---|
@@ -71,38 +73,39 @@ cronica C:\projects\my-app
 | **What it needs from you** | the folder. Nothing in it is checked out, installed or written |
 | **What it never does** | send anything anywhere. The optional AI headlines use a model on your machine |
 | **What you can change** | every headline, without building again: [`rotulos.json`](#the-news-desk-rotulosjson) |
-
-The tool speaks Spanish, like the film: a crónica is a Spanish newspaper's genre, and its vocabulary (*número*,
-*titular*, *hemeroteca*) is the interface. The commands and options are all listed below in English.
+| **Which language** | English by default; the console and the film in Spanish with `--lang es` ([more](#languages)) |
 
 ---
 
 <a id="the-example"></a>
 
-## The example: *Huerto*
+## The example: *Garden*
 
-The film above is [`examples/huerto/`](examples/huerto/construir.py): a small garden planner written as a static web
+The film above is [`examples/garden/`](examples/garden/construir.py): a small garden planner written as a static web
 page, which grows over four months in nine pull requests by three people. Run the script and you have the same
 repository, with the same dates, the same authors and the same commit hashes, so the film comes out the same every
 time.
 
 ```
-python examples/huerto/construir.py huerto
-cronica huerto
+python examples/garden/construir.py garden
+cronica garden
 ```
+
+With `--lang es` the script builds the same history in Spanish (*Huerto*), and `cronica huerto --lang es` films it in
+Spanish: that is the third film linked above.
 
 | Issue | Pull request | What the film shows |
 |:---:|---|---|
-| 1 | *Primera página* | A bare list of eight plants, in the browser's default serif |
+| 1 | *First page* | A bare list of eight plants, in the browser's default serif |
 | 2 | #1 A header and the garden's colours | The green header arrives |
-| 3 | #2 Plant cards with their drawing | A new screen: the cursor clicks *Plantas* and the cards appear |
+| 3 | #2 Plant cards with their drawing | A new screen: the cursor clicks *Plants* and the cards appear |
 | 4 | #3 Sowing and harvest calendar | A new screen, the calendar |
 | — | #4 Dark mode | **No page.** In light mode nothing changed, [so it is not news](#what-makes-the-news) |
-| 5 | #5 Filters and search | The cursor presses *Fruto*, *Hoja*, *Raíz*: the grid filters itself |
-| 6 | #6 The watering chart | A new screen; the cursor steps through the weeks |
+| 5 | #5 Filters by kind and a plant search | The cursor presses *Fruit*, *Leaf*, *Root*: the grid filters itself |
+| 6 | #6 The watering chart, week by week | A new screen; the cursor steps through the weeks |
 | 7 | #7 A home page with the weather and today's tasks | The cursor ticks tasks off |
-| 8 | #8 New typeface and rounded cards | Four screens change at once: the redesign |
-| 9 | #9 Settings | A new screen, then the last edition |
+| 8 | #8 A new typeface and rounded cards | Four screens change at once: the redesign |
+| 9 | #9 Settings for units and frost alerts | A new screen, then the final edition |
 
 ---
 
@@ -112,15 +115,15 @@ cronica huerto
 
 For anyone with a project folder and no wish to open a terminal. Windows, no administrator rights.
 
-**1. Download.** From the [v0.3.0 release](https://github.com/gitsual/cronica/releases/tag/v0.3.0), take
-`cronica-0.3.0-windows.zip` (about 126 MB: the program and its ffmpeg). The browser it photographs with, Playwright's
-Chromium, is downloaded the first time it is needed.
+**1. Download.** From the [latest release](https://github.com/gitsual/cronica/releases/latest), take
+`cronica-<version>-windows.zip` (about 126 MB: the program and its ffmpeg). The browser it photographs with,
+Playwright's Chromium, is downloaded the first time it is needed.
 
 **2. Unzip and drop.** Unzip anywhere. Drag the folder of your project onto `cronica.exe`. A console opens and tells
 you, issue by issue, what it found:
 
 <p align="center">
-  <img src="assets/gifs/terminal.gif" alt="The console while cronica works on the example: ten commits found, ten candidate issues, each one built and photographed, the dark mode issue left out because nothing changes on screen, then the recording and the path of the film" width="100%">
+  <img src="assets/gifs/terminal.gif" alt="The console while cronica works on the example: ten commits found, ten candidate milestones, each one built and photographed, the dark mode one left out because nothing changes on screen, then the recording and the path of the film" width="100%">
 </p>
 
 <p align="center"><sub>The real output of the run that made the film above; only the waiting has been cut.</sub></p>
@@ -136,16 +139,20 @@ the cache.
 <details>
 <summary><b>La misma guía, en español</b></summary>
 
-1. **Descarga.** De la [versión 0.3.0](https://github.com/gitsual/cronica/releases/tag/v0.3.0), baja
-   `cronica-0.3.0-windows.zip` (unos 126 MB, con ffmpeg dentro). El Chromium de Playwright se descarga solo la
+cronica habla español con `--lang es` (o con la variable `CRONICA_LANG=es`): la consola, el vídeo (*Núm.*, *En cifras*,
+*Hemeroteca*, *Última edición*), las fechas y los titulares que escribe la IA. Las opciones también se pueden escribir
+en español: `--musica`, `--estetica`, `--previa`, `--ocultar lineas`…
+
+1. **Descarga.** De la [última versión](https://github.com/gitsual/cronica/releases/latest), baja
+   `cronica-<versión>-windows.zip` (unos 126 MB, con ffmpeg dentro). El Chromium de Playwright se descarga solo la
    primera vez.
-2. **Arrastra.** Descomprime donde quieras y arrastra la carpeta de tu proyecto sobre `cronica.exe`. La consola va
-   contando qué encuentra, hito a hito.
+2. **Arrastra o lanza.** Descomprime donde quieras. Desde una consola: `cronica.exe C:\proyectos\mi-app --lang es`;
+   arrastrando la carpeta sobre `cronica.exe` sale en inglés, salvo que tengas `CRONICA_LANG=es` en el entorno.
 3. **Mira.** El vídeo queda al lado de la carpeta, como `<carpeta>-evolucion.mp4`. Para cambiar un titular, edita el
-   `rotulos.json` que te indica al final y vuelve a arrastrar la carpeta: solo se vuelve a grabar el vídeo.
+   `rotulos.json` que te indica al final y vuelve a lanzarlo: solo se vuelve a grabar el vídeo.
 
 Tu carpeta no se toca: cada hito se construye en un clon propio dentro de la caché. Si se corta, al relanzar sigue
-donde lo dejó.
+donde lo dejó. [Así se ve en español](assets/video/huerto-diario.mp4).
 </details>
 
 ---
@@ -155,37 +162,38 @@ donde lo dejó.
 ## How it looks
 
 The film is a newspaper about the project. It opens as a newsreel, in a dark room with the film's perforations at the
-sides. Every milestone is a front page: the masthead with the date and «Núm. N de M · commit», a red stamp that falls
-as the page enters, the headline, the app in use as the photograph with its caption, *En cifras* (screens, files,
-lines, commits, authors) and the *Hemeroteca*, the archive of every screen published so far, with the ones this issue
-touched marked. Along the bottom runs the strip with the dates. It closes with the last edition and the totals.
+sides. Every milestone is a front page: the masthead with the date and «No. N of M · commit», a red stamp that falls
+as the page enters, the headline, the app in use as the photograph with its caption, *By the numbers* (screens, files,
+lines, commits, authors) and the *Archive* of every screen published so far, with the ones this issue touched marked.
+Along the bottom runs the strip with the dates. It closes with the final edition and the totals.
 
 <p align="center">
-  <img src="assets/frames/numero.jpg" alt="Issue 8 of 9: the masthead «Crónica de huerto», the date, the stamp «9 JUN 2026», the headline «Letra nueva y tarjetas redondeadas», the plant cards as the photo, En cifras and the Hemeroteca with four screens" width="100%">
+  <img src="assets/frames/issue.jpg" alt="Issue 8 of 9: the masthead «The garden Chronicle», the date, the stamp «9 JUN 2026», the headline «A new typeface and rounded cards», the plant cards as the photo, By the numbers and the Archive with four screens" width="100%">
 </p>
 
 <p align="center">
-  <img src="assets/frames/noticiario.jpg" alt="The opening: «Crónica — noticiario del proyecto», «huerto» in large type, the dates and the totals, in a dark room with film perforations" width="49%">
-  <img src="assets/frames/ultima.jpg" alt="The close: «Última edición», «Cuatro meses de huerto» and the final figures" width="49%">
+  <img src="assets/frames/newsreel.jpg" alt="The opening: «Crónica — project newsreel», «garden» in large type, the dates and the totals, in a dark room with film perforations" width="49%">
+  <img src="assets/frames/final.jpg" alt="The close: «Final edition», «Four months of garden» and the final figures" width="49%">
 </p>
 
-<p align="center"><sub>The opening, an issue, the last edition. Frames of the example film.</sub></p>
+<p align="center"><sub>The opening, an issue, the final edition. Frames of the example film.</sub></p>
 
-With `--estetica clasica` the same history comes out in the earlier look: a dark, quiet stage with the app in a
-browser frame, the figures on the right and the screens piling up beside it.
+With `--look classic` the same history comes out in the earlier look: a dark, quiet stage with the app in a browser
+frame, the figures on the right and the screens piling up beside it.
 
 <p align="center">
-  <a href="assets/video/huerto-clasica.mp4"><img src="assets/gifs/clasica.gif" alt="The classic look: a dark background, the headline, the app in a browser frame, the figures and a column of screens" width="100%"></a>
+  <a href="assets/video/garden-classic.mp4"><img src="assets/gifs/classic.gif" alt="The classic look: a dark background, the headline, the app in a browser frame, the figures and a column of screens" width="100%"></a>
 </p>
 
-An aesthetic is a single HTML page that reads `datos.json` and exposes `seek(t)`: `--estetica my-page.html` uses
-yours. The two that ship are in [`cronica/reproductor/esteticas/`](cronica/reproductor/esteticas). The typefaces
+A look is a single HTML page that reads `datos.json` and exposes `seek(t)`: `--look my-page.html` uses yours. Every
+word and date it shows arrives already translated in `datos.json`, so your own look speaks every language cronica
+does. The two that ship are in [`cronica/reproductor/esteticas/`](cronica/reproductor/esteticas). The typefaces
 travel with the program, so it records the same without a network: Newsreader, UnifrakturMaguntia and IBM Plex
 Mono, all three under the SIL Open Font License ([`cronica/reproductor/fonts/`](cronica/reproductor/fonts)).
 
-### Proofs: `--previa`
+### Proofs: `--preview`
 
-Before printing the whole film, `--previa` leaves one frame per scene to look at. The *galeradas*:
+Before printing the whole film, `--preview` leaves one frame per scene to look at:
 
 <p align="center">
   <img src="assets/galeradas.jpg" alt="Nine proofs of the example in a grid, one per issue, from the bare list to the settings screen" width="100%">
@@ -217,11 +225,12 @@ Before printing the whole film, `--previa` leaves one frame per scene to look at
 5. **Compare.** Each screen against the same screen in the issue before. [What did not change on screen is not
    news](#what-makes-the-news).
 6. **Write.** A headline per issue from the PR title or commit subject, without Jira keys or `feat:` prefixes. With
-   `--ia`, a model **on your machine** writes them. Either way they land in [`rotulos.json`](#the-news-desk-rotulosjson).
+   `--ai`, a model **on your machine** writes them, in the language of the run. Either way they land in
+   [`rotulos.json`](#the-news-desk-rotulosjson).
 7. **Print.** The player, frame by frame, at 1080p and 30 fps, mixed with [music](#music) generated for the length of
    the film and the moment each scene starts.
 
-Everything is cached per issue. If a run stops or fails, the next one carries on where it was; `--reintentar` builds
+Everything is cached per issue. If a run stops or fails, the next one carries on where it was; `--retry` builds
 again only the issues that failed.
 
 ---
@@ -235,9 +244,9 @@ at least one screen is new, or one existing screen differs from the issue before
 pixels. Storybook's own frame counts only when it really changes (a new theme), not for one more entry in its
 sidebar.
 
-<p align="center"><img src="assets/cifras.png" alt="A bar chart of the example: lines of interface code after each of the ten milestones, from 25 to 404; nine bars filled with a red stamp beneath, and the dark mode bar drawn dashed and hollow with the note «no page: nothing changes on screen»" width="100%"></p>
+<p align="center"><img src="assets/cifras.png" alt="A bar chart of the example: lines of interface code after each of the ten milestones; nine bars filled with a red stamp beneath, and the dark mode bar drawn dashed and hollow with the note «no page: nothing changes on screen»" width="100%"></p>
 
-In the example, *Modo oscuro* adds code but leaves the light screens exactly as they were, so it is counted in the
+In the example, *Dark mode* adds code but leaves the light screens exactly as they were, so it is counted in the
 figures of the next issue and gets no page of its own. The same rule keeps a film of a long project watchable: in a
 history of three hundred commits it is the thirty that changed the interface that make the film.
 
@@ -250,14 +259,35 @@ history of three hundred commits it is the thirty that changed the interface tha
 The music is written by the program for each film, so there are no rights to clear: its length is the film's, and
 every scene change lands on it.
 
-<p align="center"><img src="assets/musica.png" alt="Three waveforms: consola, a swing tune with a melody; noticiario, a march with clear beats; ambiente, a continuous pad" width="100%"></p>
+<p align="center"><img src="assets/musica.png" alt="Three waveforms: console, a swing tune with a melody; newsreel, a march with clear beats; ambient, a continuous pad" width="100%"></p>
 
 | | Listen (40 s) |
 |---|---|
-| `--musica consola` (default): a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
-| `--musica noticiario`: a cinema newsreel march in B♭ at 128 bpm, fanfare, brass melody, tuba, snare rolls and a cymbal on every part; made for the newspaper look | [musica-noticiario.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-noticiario.mp3) |
-| `--musica ambiente`: a pad with no melody that changes chord with every scene | [musica-ambiente.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-ambiente.mp3) |
-| `--musica track.mp3` · `--sin-musica` | your own track, or silence |
+| `--music console` (default): a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
+| `--music newsreel`: a cinema newsreel march in B♭ at 128 bpm, fanfare, brass melody, tuba, snare rolls and a cymbal on every part; made for the newspaper look | [musica-noticiario.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-noticiario.mp3) |
+| `--music ambient`: a pad with no melody that changes chord with every scene | [musica-ambiente.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-ambiente.mp3) |
+| `--music track.mp3` · `--no-music` | your own track, or silence |
+
+---
+
+<a id="languages"></a>
+
+## Languages
+
+English is the default; Spanish is one option away. The language covers everything cronica says: the console, the
+film (masthead, *No.*, *By the numbers*, *Archive*, *Final edition*, the stamps, the dates and the span of the
+closing line), the screen names it adds, and the headlines the local model writes with `--ai`.
+
+| | English | Spanish |
+|---|---|---|
+| Choose it | default | `--lang es`, or `CRONICA_LANG=es` for every run |
+| The film | *The garden Chronicle* · *No. 8 of 9* · *By the numbers* · *Archive* · *Final edition* | *Crónica de huerto* · *Núm. 8 de 9* · *En cifras* · *Hemeroteca* · *Última edición* |
+| Dates | Tuesday, June 9, 2026 · 9 JUN 2026 | Martes, 9 de junio de 2026 · 9 JUN 2026 |
+| Output | `<folder>-evolution.mp4` | `<folder>-evolucion.mp4` |
+| Options | `--music newsreel --look classic --hide lines` | the same, or `--musica noticiario --estetica clasica --ocultar lineas` |
+
+Headlines that come from your pull request titles stay as they were written. The translations live in one table,
+[`cronica/i18n.py`](cronica/i18n.py): a new language is a new column there.
 
 ---
 
@@ -267,47 +297,62 @@ every scene change lands on it.
 
 | | |
 |---|---|
-| `-o, --salida X.mp4` | where the film goes |
-| `-n, --max-hitos 30` | issues at most |
-| `--rama develop` | another branch (also `origin/develop`) |
-| `--modo storybook\|web\|estatico` | force what is photographed |
-| `--ia [model]` | headlines from Ollama (`127.0.0.1:11434`) or any OpenAI-compatible server (`CRONICA_LLM=http://127.0.0.1:1234/v1`). Nothing leaves the machine |
-| `--musica consola\|noticiario\|ambiente\|track.mp3` · `--sin-musica` | [the music](#music) |
-| `--estetica diario\|clasica\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
-| `--segundos 6` | seconds of app in use per issue, at most |
-| `--ocultar lineas` | a figure that does not appear in the film (repeatable) |
-| `--nombre folder=name` | the name a repository appears under (if it was renamed) |
-| `--tambien other-folder` | a repository that does not appear on screen but counts in the figures |
-| `--paseo [60]` | at the end, a walk through every component, switching Storybook's themes |
+| `--lang en\|es` | the [language](#languages) of the console and the film |
+| `-o, --output X.mp4` | where the film goes |
+| `-n, --max-milestones 30` | issues at most |
+| `--branch develop` | another branch (also `origin/develop`) |
+| `--mode storybook\|web\|static` | force what is photographed |
+| `--ai [model]` | headlines from Ollama (`127.0.0.1:11434`) or any OpenAI-compatible server (`CRONICA_LLM=http://127.0.0.1:1234/v1`). Nothing leaves the machine |
+| `--music console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
+| `--look newspaper\|classic\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
+| `--seconds 6` | seconds of app in use per issue, at most |
+| `--hide lines` | a figure that does not appear in the film (`components`, `screens`, `stories`, `files`, `lines`, `commits`, `authors`; repeatable) |
+| `--name folder=name` | the name a repository appears under (if it was renamed) |
+| `--also other-folder` | a repository that does not appear on screen but counts in the figures |
+| `--walk [60]` | at the end, a walk through every component, switching Storybook's themes |
 | `--demo demo.json` | at the end, [a guided demo](#a-guided-demo-at-the-end) of Storybook |
-| `--previa` | no film: one frame per scene, [to review](#proofs---previa) |
-| `--regrabar` | record the clips again from the saved sites, without building |
-| `--reintentar` | build again the issues that failed |
-| `--desde-cero` | delete this project's cache first |
+| `--preview` | no film: one frame per scene, [to review](#proofs---preview) |
+| `--rerecord` | record the clips again from the saved sites, without building |
+| `--retry` | build again the issues that failed |
+| `--from-scratch` | delete this project's cache first |
 
-The cache lives in `%LOCALAPPDATA%\cronica` (Windows) or `~/.cache/cronica` (Linux), one folder per project
-(`CRONICA_CACHE` moves it). Inside, `logs/` keeps the output of every install and build: the *teletipo*.
+Every option also answers to its Spanish name (`--salida`, `--rama`, `--musica`, `--previa`…), so older scripts keep
+working. The cache lives in `%LOCALAPPDATA%\cronica` (Windows) or `~/.cache/cronica` (Linux), one folder per project
+(`CRONICA_CACHE` moves it). Inside, `logs/` keeps the output of every install and build.
 
 ### The news desk: `rotulos.json`
 
-One headline per scene (`rotulos`), keyed by commit, and also:
-
-- `titulo` and `cierre`: the opening and the line of the last edition; `pie`, a small line under it.
-- `notas`: a subtitle per scene (same keys as `rotulos`).
-- `actos`: `[{"desde": "<scene key>", "titulo": "…", "frase": "…"}]`. Before that scene comes a card with «Acto I»,
-  «Acto II»… to tell the film in parts.
-
-### A guided demo at the end
-
-`--demo demo.json` ends the film live: each step is a scene recorded on the current Storybook, shown as *Edición en
-directo* with an *EN DIRECTO* stamp, and not counted as an issue.
+One headline per scene, keyed by commit, written in the language of the run. In English:
 
 ```json
 {
- "sitio": "~/my-sb/storybook-static",
- "pasos": [
-  {"story": "intro--welcome", "segundos": 5, "rotulo": "The front page", "acciones": [{"leer": true}]},
-  {"story": "button--primary", "segundos": 6, "acciones": [{"global": "Dark"}, {"clic": "button"}, {"usar": 1}]}
+ "title": "garden",
+ "closing": "From a list of plants to a garden planner",
+ "footer": "",
+ "headlines": {"81570da": "Plant cards with their drawing"},
+ "notes": {},
+ "acts": [{"from": "81570da", "title": "The screens", "line": "Every pull request adds one"}]
+}
+```
+
+- `title` and `closing`: the opening and the line of the final edition; `footer`, a small line under it.
+- `notes`: a subtitle per scene (same keys as `headlines`).
+- `acts`: before the scene in `from` comes a card with «Act I», «Act II»… to tell the film in parts.
+
+The Spanish keys (`titulo`, `cierre`, `pie`, `rotulos`, `notas`, `actos` with `desde`, `titulo`, `frase`) are read as
+well.
+
+### A guided demo at the end
+
+`--demo demo.json` ends the film live: each step is a scene recorded on the current Storybook, shown as *Live
+edition* with a *LIVE* stamp, and not counted as an issue.
+
+```json
+{
+ "site": "~/my-sb/storybook-static",
+ "steps": [
+  {"story": "intro--welcome", "seconds": 5, "headline": "The front page", "actions": [{"read": true}]},
+  {"story": "button--primary", "seconds": 6, "actions": [{"global": "Dark"}, {"click": "button"}, {"use": 1}]}
  ]
 }
 ```
@@ -315,12 +360,13 @@ directo* with an *EN DIRECTO* stamp, and not counted as an issue.
 | Action | Effect |
 |---|---|
 | `global` | change an option in Storybook's toolbar |
-| `clic` | press a selector in the story, or in Storybook with `"en": "barra"` |
-| `usar` | operate the story's controls |
-| `leer` | run the cursor along the text |
-| `rueda` | scroll the page |
+| `click` | press a selector in the story, or in Storybook with `"in": "toolbar"` |
+| `use` | operate the story's controls |
+| `read` | run the cursor along the text |
+| `scroll` | scroll the page |
 
-`sitio` is optional: without it the demo is recorded on the last build.
+`site` is optional: without it the demo is recorded on the last build. The Spanish keys (`sitio`, `pasos`,
+`segundos`, `rotulo`, `acciones`, `clic`, `usar`, `leer`, `rueda`) still work.
 
 ---
 
@@ -328,25 +374,27 @@ directo* with an *EN DIRECTO* stamp, and not counted as an issue.
 
 ## Architecture
 
-About 2,800 lines of Python and two players in HTML. Each step of the [process](#how-an-issue-is-made) is one module:
+About 3,000 lines of Python and two players in HTML. Each step of the [process](#how-an-issue-is-made) is one module:
 
-| Module | Lines | Does |
-|---|---:|---|
-| [`cli.py`](cronica/cli.py) | 513 | the command, the cache, the order of everything |
-| [`historia.py`](cronica/historia.py) | 258 | git: first-parent walk, merges, sampling by change, figures without checkout |
-| [`detectar.py`](cronica/detectar.py) | 149 | Storybook, web app or plain HTML, and the package manager |
-| [`construir.py`](cronica/construir.py) | 348 | clone, install when the lock changes, build or serve, and photograph |
-| [`fotos.py`](cronica/fotos.py) | 240 | the photographs: every component or screen, light and dark |
-| [`recorrido.py`](cronica/recorrido.py) | ~560 | the app in use: cursor, clicks, typing, scrolling, the walk and the demo |
-| [`cambios.py`](cronica/cambios.py) | 43 | what changed on screen |
-| [`rotulos.py`](cronica/rotulos.py) | 136 | headlines from titles or from a local model |
-| [`montaje.py`](cronica/montaje.py) | 165 | `datos.json`, the player frame by frame, ffmpeg |
-| [`musica.py`](cronica/musica.py) | 349 | the three scores, synthesised with NumPy |
-| [`reproductor/esteticas/`](cronica/reproductor/esteticas) | 855 | `diario.html` and `clasica.html`: the film is a web page, sought frame by frame |
+| Module | Does |
+|---|---|
+| [`cli.py`](cronica/cli.py) | the command, the cache, the order of everything |
+| [`historia.py`](cronica/historia.py) | git: first-parent walk, merges, sampling by change, figures without checkout |
+| [`detectar.py`](cronica/detectar.py) | Storybook, web app or plain HTML, and the package manager |
+| [`construir.py`](cronica/construir.py) | clone, install when the lock changes, build or serve, and photograph |
+| [`fotos.py`](cronica/fotos.py) | the photographs: every component or screen, light and dark |
+| [`recorrido.py`](cronica/recorrido.py) | the app in use: cursor, clicks, typing, scrolling, the walk and the demo |
+| [`cambios.py`](cronica/cambios.py) | what changed on screen |
+| [`rotulos.py`](cronica/rotulos.py) | headlines from titles or from a local model |
+| [`i18n.py`](cronica/i18n.py) | the languages: the message table, the dates, the words of the film |
+| [`montaje.py`](cronica/montaje.py) | `datos.json`, the player frame by frame, ffmpeg |
+| [`musica.py`](cronica/musica.py) | the three scores, synthesised with NumPy |
+| [`reproductor/esteticas/`](cronica/reproductor/esteticas) | `diario.html` (newspaper) and `clasica.html` (classic): the film is a web page, sought frame by frame |
 
-The film is a web page: the player receives `datos.json` (issues, figures, clips, headlines) and exposes `seek(t)`;
-`montaje.py` asks for every frame at 1/30 s and passes the screenshots to ffmpeg. That is why an aesthetic is only an
-HTML file, and why the same history can be printed in another look without touching the cache.
+The film is a web page: the player receives `datos.json` (issues, figures, clips, headlines, and the words and dates in
+the chosen language) and exposes `seek(t)`; `montaje.py` asks for every frame at 1/30 s and passes the screenshots to
+ffmpeg. That is why a look is only an HTML file, and why the same history can be printed in another look or another
+language without touching the cache.
 
 ---
 
@@ -354,14 +402,14 @@ HTML file, and why the same history can be printed in another look without touch
 
 ## Install
 
-**Windows:** the zip of the [release](https://github.com/gitsual/cronica/releases/tag/v0.3.0), as in [the first
+**Windows:** the zip of the [latest release](https://github.com/gitsual/cronica/releases/latest), as in [the first
 film](#your-first-film). If `ffmpeg.exe` sits next to `cronica.exe`, that one is used. To build the folder yourself:
 `empaquetar.ps1` (PyInstaller).
 
 **Linux, or Windows from Python:**
 
 ```
-pip install https://github.com/gitsual/cronica/releases/download/v0.3.0/cronica-0.3.0-py3-none-any.whl
+pip install git+https://github.com/gitsual/cronica
 playwright install chromium
 cronica ~/projects/my-app
 ```
@@ -375,11 +423,11 @@ through corepack).
 
 ## Verification
 
-| Suite | Command | Result for 0.3.0 |
+| Suite | Command | Result for 0.4.0 |
 |---|---|---|
-| Unit and end to end | `python -m pytest -q` | 35 passed on Windows 11, including a real repository built, photographed and recorded in Chromium |
-| The example | `python examples/huerto/construir.py huerto` then `cronica huerto` | the two films in [`assets/video/`](assets/video), 9 issues of 10 milestones, 41 s |
-| The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--previa` |
+| Unit and end to end | `python -m pytest -q` | 41 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, and both languages |
+| The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
+| The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 
 ---
 

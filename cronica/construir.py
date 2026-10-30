@@ -21,6 +21,7 @@ import urllib.request
 from pathlib import Path
 
 from . import cambios, detectar, fotos, historia, recorrido
+from .i18n import _
 from .servidor import Servidor
 
 T_INSTALAR = 20 * 60
@@ -74,13 +75,13 @@ def _correr(cmd: list[str], cwd: Path, log: Path, limite: int, extra_env: dict |
             p = subprocess.Popen(_comando(cmd), cwd=cwd, stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                                  env=_entorno(extra_env), **_grupo())
         except OSError as error:
-            f.write(f"no se pudo lanzar: {error}\n")
+            f.write(_("no se pudo lanzar: {e}\n", e=error))
             return False
         try:
             return p.wait(timeout=limite) == 0
         except subprocess.TimeoutExpired:
             _matar(p)
-            f.write(f"\n[cronica] tiempo agotado ({limite} s)\n")
+            f.write(_("\n[cronica] tiempo agotado ({s} s)\n", s=limite))
             return False
 
 
@@ -193,7 +194,7 @@ def _dev(clon: Path, receta: detectar.Receta, log: Path, fotografiar) -> dict | 
                              stdin=subprocess.DEVNULL, env=_entorno(), text=True, encoding="utf-8",
                              errors="replace", **_grupo())
     except OSError as error:
-        f.write(f"no se pudo lanzar: {error}\n")
+        f.write(_("no se pudo lanzar: {e}\n", e=error))
         f.close()
         return None
     urls: list[str] = []

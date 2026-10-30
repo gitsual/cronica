@@ -17,7 +17,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import __version__, cambios, construir, detectar, historia, montaje, musica, recorrido, rotulos
+from . import __version__, cambios, construir, detectar, historia, i18n, montaje, musica, recorrido, rotulos
+from .i18n import _
 from .servidor import Servidor
 
 PRESELECCION = 300  # candidatos que se miran como mucho antes de muestrear (detectar cuesta un ls-tree)
@@ -53,7 +54,7 @@ def _abrir_chromium(p):
     except Exception as error:
         if "Executable doesn't exist" not in str(error) and "playwright install" not in str(error):
             raise
-        print("  Falta el Chromium de Playwright; lo descargo (una sola vez, ~150 MB)…")
+        print(_("  Falta el Chromium de Playwright; lo descargo (una sola vez, ~150 MB)…"))
         from playwright._impl._driver import compute_driver_executable, get_driver_env
         driver = compute_driver_executable()
         cmd = [*driver, "install", "chromium"] if isinstance(driver, tuple) else [str(driver), "install", "chromium"]
@@ -61,53 +62,89 @@ def _abrir_chromium(p):
         return p.chromium.launch()
 
 
+# Los nombres en inglés son los de la documentación; los de antes, en español, siguen valiendo.
+MUSICAS = {"console": "consola", "newsreel": "noticiario", "ambient": "ambiente"}
+LOOKS = {"newspaper": "diario", "classic": "clasica"}
+MODOS = {"static": "estatico"}
+CIFRAS = {"components": "componentes", "screens": "pantallas", "stories": "stories", "files": "ficheros",
+          "lines": "lineas", "commits": "commits", "authors": "autores"}
+
+
+def _idioma_pedido(argv: list[str]) -> str | None:
+    for k, a in enumerate(argv):
+        for opcion in ("--lang", "--idioma"):
+            if a == opcion and k + 1 < len(argv):
+                return argv[k + 1]
+            if a.startswith(opcion + "="):
+                return a.split("=", 1)[1]
+    return None
+
+
 def _argumentos(argv: list[str] | None) -> argparse.Namespace:
+    lista = list(sys.argv[1:] if argv is None else argv)
+    pedido = _idioma_pedido(lista)
+    if pedido in i18n.IDIOMAS:
+        i18n.poner(pedido)
     ap = argparse.ArgumentParser(
-        prog="cronica", description="Hace el vídeo de cómo evolucionó la interfaz de un proyecto git, hito a hito.")
-    ap.add_argument("carpetas", nargs="*", metavar="carpeta",
-                    help="la carpeta del proyecto (un repositorio git); si se mudó a otro repositorio, también esa, "
-                         "en orden. «carpeta@rama» elige la rama de cada una")
-    ap.add_argument("-o", "--salida", help="el mp4 (por defecto, <carpeta>-evolucion.mp4 al lado del proyecto)")
-    ap.add_argument("-n", "--max-hitos", type=int, default=30, help="escenas como mucho (30)")
-    ap.add_argument("--rama", help="la rama que se recorre (por defecto, la que está activa)")
-    ap.add_argument("--modo", choices=("auto", "storybook", "web", "estatico"), default="auto",
-                    help="qué se fotografía; auto = Storybook si lo hay, si no la app, si no un index.html")
-    ap.add_argument("--ia", nargs="?", const="", metavar="MODELO",
-                    help="rótulos escritos por un modelo local (Ollama en :11434 o CRONICA_LLM=http://…/v1)")
-    ap.add_argument("--musica", metavar="ESTILO|FICHERO", default="consola",
-                    help="la música de fondo: un estilo generado (consola, por defecto; noticiario; ambiente) "
-                         "o un fichero de audio propio")
-    ap.add_argument("--sin-musica", action="store_true")
-    ap.add_argument("--segundos", type=float, default=6.0, help="segundos como mucho de app en uso por hito (6)")
+        prog="cronica", description=_("Hace el vídeo de cómo evolucionó la interfaz de un proyecto git, hito a hito."))
+    ap.add_argument("carpetas", nargs="*", metavar="folder",
+                    help=_("la carpeta del proyecto (un repositorio git); si se mudó a otro repositorio, también esa, "
+                           "en orden. «carpeta@rama» elige la rama de cada una"))
+    ap.add_argument("--lang", "--idioma", dest="idioma", choices=i18n.IDIOMAS, default=i18n.idioma,
+                    help=_("idioma de la consola y del vídeo: en (por defecto) o es"))
+    ap.add_argument("-o", "--output", "--salida", dest="salida",
+                    help=_("el mp4 (por defecto, <carpeta>-evolucion.mp4 al lado del proyecto)"))
+    ap.add_argument("-n", "--max-milestones", "--max-hitos", dest="max_hitos", type=int, default=30,
+                    help=_("escenas como mucho (30)"))
+    ap.add_argument("--branch", "--rama", dest="rama", help=_("la rama que se recorre (por defecto, la que está activa)"))
+    ap.add_argument("--mode", "--modo", dest="modo", choices=("auto", "storybook", "web", "static", "estatico"),
+                    default="auto", help=_("qué se fotografía; auto = Storybook si lo hay, si no la app, si no un index.html"))
+    ap.add_argument("--ai", "--ia", dest="ia", nargs="?", const="", metavar="MODEL",
+                    help=_("rótulos escritos por un modelo local (Ollama en :11434 o CRONICA_LLM=http://…/v1)"))
+    ap.add_argument("--music", "--musica", dest="musica", metavar="STYLE|FILE", default="console",
+                    help=_("la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio"))
+    ap.add_argument("--no-music", "--sin-musica", dest="sin_musica", action="store_true", help=_("sin música"))
+    ap.add_argument("--seconds", "--segundos", dest="segundos", type=float, default=6.0,
+                    help=_("segundos como mucho de app en uso por hito (6)"))
     ap.add_argument("--fps", type=int, default=30)
-    ap.add_argument("--previa", action="store_true", help="no graba el vídeo: deja fotogramas sueltos para revisar")
-    ap.add_argument("--reintentar", action="store_true", help="vuelve a construir los hitos que fallaron")
-    ap.add_argument("--regrabar", action="store_true",
-                    help="vuelve a grabar la app en uso desde los sitios ya construidos (sin build)")
-    ap.add_argument("--desde-cero", action="store_true", help="borra la caché de este proyecto antes de empezar")
-    ap.add_argument("--trabajo", help="carpeta de trabajo (por defecto, en la caché del usuario)")
-    ap.add_argument("--preparar", action="append", metavar="CMD",
-                    help="orden que se ejecuta tras instalar y antes de construir («repo=orden» para uno solo)")
-    ap.add_argument("--tambien", action="append", metavar="CARPETA",
-                    help="un repositorio que no sale en pantalla pero cuenta en las cifras (carpeta o carpeta@rama)")
-    ap.add_argument("--paseo", nargs="?", type=float, const=60.0, metavar="SEGUNDOS",
-                    help="al final, un paseo por todos los componentes cambiando los temas de la barra (60 s)")
-    ap.add_argument("--demo", metavar="FICHERO.json",
-                    help="al final, una demo guiada de Storybook: paradas, acciones y segundos de cada una")
-    ap.add_argument("--nombre", action="append", default=[], metavar="CARPETA=NOMBRE",
-                    help="el nombre con el que sale un repositorio en el vídeo (p. ej. si se ha renombrado)")
-    ap.add_argument("--ocultar", action="append", default=[], metavar="CIFRA",
-                    choices=("componentes", "pantallas", "stories", "ficheros", "lineas", "commits", "autores"),
-                    help="una cifra que no sale en el vídeo (se puede repetir): p. ej. --ocultar lineas")
-    ap.add_argument("--estetica", default=montaje.ESTETICAS[0], metavar="NOMBRE",
-                    help="cómo se ve el vídeo: " + " o ".join(montaje.ESTETICAS) +
-                         f" (por defecto, {montaje.ESTETICAS[0]}), o la ruta de un .html propio")
+    ap.add_argument("--preview", "--previa", dest="previa", action="store_true",
+                    help=_("no graba el vídeo: deja fotogramas sueltos para revisar"))
+    ap.add_argument("--retry", "--reintentar", dest="reintentar", action="store_true",
+                    help=_("vuelve a construir los hitos que fallaron"))
+    ap.add_argument("--rerecord", "--regrabar", dest="regrabar", action="store_true",
+                    help=_("vuelve a grabar la app en uso desde los sitios ya construidos (sin build)"))
+    ap.add_argument("--from-scratch", "--desde-cero", dest="desde_cero", action="store_true",
+                    help=_("borra la caché de este proyecto antes de empezar"))
+    ap.add_argument("--workdir", "--trabajo", dest="trabajo", help=_("carpeta de trabajo (por defecto, en la caché del usuario)"))
+    ap.add_argument("--prepare", "--preparar", dest="preparar", action="append", metavar="CMD",
+                    help=_("orden que se ejecuta tras instalar y antes de construir («repo=orden» para uno solo)"))
+    ap.add_argument("--also", "--tambien", dest="tambien", action="append", metavar="FOLDER",
+                    help=_("un repositorio que no sale en pantalla pero cuenta en las cifras (carpeta o carpeta@rama)"))
+    ap.add_argument("--walk", "--paseo", dest="paseo", nargs="?", type=float, const=60.0, metavar="SECONDS",
+                    help=_("al final, un paseo por todos los componentes cambiando los temas de la barra (60 s)"))
+    ap.add_argument("--demo", metavar="FILE.json",
+                    help=_("al final, una demo guiada de Storybook: paradas, acciones y segundos de cada una"))
+    ap.add_argument("--name", "--nombre", dest="nombre", action="append", default=[], metavar="FOLDER=NAME",
+                    help=_("el nombre con el que sale un repositorio en el vídeo (p. ej. si se ha renombrado)"))
+    ap.add_argument("--hide", "--ocultar", dest="ocultar", action="append", default=[], metavar="FIGURE",
+                    help=_("una cifra que no sale en el vídeo (se puede repetir): p. ej. --hide lines"))
+    ap.add_argument("--look", "--estetica", dest="estetica", default="newspaper", metavar="NAME",
+                    help=_("cómo se ve el vídeo: newspaper (por defecto) o classic, o la ruta de un .html propio"))
     ap.add_argument("--version", action="version", version=f"cronica {__version__}")
-    args = ap.parse_args(argv)
+    args = ap.parse_args(lista)
+    i18n.poner(args.idioma)
+    args.modo = MODOS.get(args.modo, args.modo)
+    args.musica = MUSICAS.get(args.musica, args.musica)
+    args.estetica = LOOKS.get(args.estetica, args.estetica)
     if args.estetica not in montaje.ESTETICAS and not Path(args.estetica).is_file():
-        ap.error(f"--estetica: «{args.estetica}» no es {' ni '.join(montaje.ESTETICAS)} ni un .html que exista")
+        ap.error(_("--look: «{e}» no es newspaper ni classic ni un .html que exista", e=args.estetica))
     if args.musica not in musica.ESTILOS and not Path(args.musica).is_file():
-        ap.error(f"--musica: «{args.musica}» no es {', '.join(musica.ESTILOS)} ni un fichero que exista")
+        ap.error(_("--music: «{e}» no es console, newsreel ni ambient ni un fichero que exista", e=args.musica))
+    validas = set(CIFRAS) | set(CIFRAS.values())
+    for c in args.ocultar:
+        if c not in validas:
+            ap.error(_("--hide: «{e}» no es una cifra ({c})", e=c, c=", ".join(CIFRAS)))
+    args.ocultar = [CIFRAS.get(c, c) for c in args.ocultar]
     return args
 
 
@@ -126,11 +163,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _ejecutar(args)
     except KeyboardInterrupt:
-        print("\nInterrumpido. Lo hecho queda en caché: al relanzar sigue donde lo dejó.")
+        print(_("\nInterrumpido. Lo hecho queda en caché: al relanzar sigue donde lo dejó."))
         return 130
     finally:
         if _arrastrado():
-            input("\nPulsa Intro para cerrar…")
+            input(_("\nPulsa Intro para cerrar…"))
 
 
 @dataclass
@@ -167,19 +204,19 @@ def _carpeta_y_rama(texto: str) -> tuple[Path, str | None]:
 
 def _ejecutar(args: argparse.Namespace) -> int:
     if not args.carpetas:
-        print("Uso: cronica <carpeta del proyecto> [<carpeta del repositorio al que se mudó> …]\n"
-              "     (o arrastra la carpeta sobre cronica.exe)")
+        print(_("Uso: cronica <carpeta del proyecto> [<carpeta del repositorio al que se mudó> …]\n"
+                "     (o arrastra la carpeta sobre cronica.exe)"))
         return 2
     pedidas = [_carpeta_y_rama(c) for c in args.carpetas]
-    for carpeta, _ in pedidas:
+    for carpeta, _rama in pedidas:
         if not carpeta.is_dir() or not historia.es_repo(carpeta):
-            print(f"«{carpeta}» no es una carpeta con un repositorio git.")
+            print(_("«{c}» no es una carpeta con un repositorio git.", c=carpeta))
             return 2
     ffmpeg = _ffmpeg()
     if not ffmpeg and not args.previa:
-        print("Falta ffmpeg. En Windows: winget install Gyan.FFmpeg · en Linux: el paquete ffmpeg.")
+        print(_("Falta ffmpeg. En Windows: winget install Gyan.FFmpeg · en Linux: el paquete ffmpeg."))
         return 2
-    repos = [historia.raiz(c) for c, _ in pedidas]
+    repos = [historia.raiz(c) for c, _rama in pedidas]
     if args.trabajo:
         trabajo = Path(args.trabajo)
     elif len(repos) == 1:
@@ -191,7 +228,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
         shutil.rmtree(trabajo, ignore_errors=True)
     trabajo.mkdir(parents=True, exist_ok=True)
     nombre = repos[0].name
-    salida = Path(os.path.abspath(args.salida)) if args.salida else repos[0].parent / f"{nombre}-evolucion.mp4"
+    salida = Path(os.path.abspath(args.salida)) if args.salida else repos[0].parent / f"{nombre}-{'evolucion' if i18n.idioma == 'es' else 'evolution'}.mp4"
     t0 = time.time()
     print(f"cronica {__version__}")
 
@@ -201,7 +238,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
         navegador = _abrir_chromium(p)
         previas: dict[str, Path] = {}   # la última foto enseñada de cada ficha (sigue de un repositorio al siguiente)
         capitulos: list[Capitulo] = []
-        for k, (repo, (_, rama)) in enumerate(zip(repos, pedidas)):
+        for k, (repo, (_carpeta, rama)) in enumerate(zip(repos, pedidas)):
             propio = trabajo if len(repos) == 1 else _trabajo_de(repo)
             cap = _capitulo(repo, rama or args.rama, args, navegador, previas, propio, primero_forzado=k > 0)
             if isinstance(cap, int):
@@ -210,14 +247,14 @@ def _ejecutar(args: argparse.Namespace) -> int:
             capitulos.append(cap)
 
         if sum(len(c.hechos) for c in capitulos) < 2:
-            print("  Hacen falta al menos dos hitos que se puedan fotografiar. Mira los logs de arriba.")
+            print(_("  Hacen falta al menos dos hitos que se puedan fotografiar. Mira los logs de arriba."))
             return 4
 
         acompanantes = []
         for t in args.tambien or []:
             carpeta, rama = _carpeta_y_rama(t)
             if not historia.es_repo(carpeta):
-                print(f"«{carpeta}» no es una carpeta con un repositorio git.")
+                print(_("«{c}» no es una carpeta con un repositorio git.", c=carpeta))
                 return 2
             raiz = historia.raiz(carpeta)
             acompanantes.append((raiz, rama or historia.rama_actual(raiz)))
@@ -240,8 +277,8 @@ def _ejecutar(args: argparse.Namespace) -> int:
         if args.previa:
             instantes = [1000] + [h["inicio"] + int(h["dur"] * 0.6) for h in video["hitos"]] + [duracion - 2000]
             fotos = montaje.fotogramas(navegador, trabajo / "video", instantes, trabajo / "previa")
-            print(f"\n  {len(fotos)} fotogramas en {trabajo / 'previa'}")
-            print(f"  rótulos editables: {trabajo / 'rotulos.json'}")
+            print(_("\n  {n} fotogramas en {d}", n=len(fotos), d=trabajo / "previa"))
+            print(_("  rótulos editables: {f}", f=trabajo / "rotulos.json"))
             return 0
 
         audio = None
@@ -252,13 +289,13 @@ def _ejecutar(args: argparse.Namespace) -> int:
         else:
             audio = musica.generar(trabajo / "musica.wav", duracion / 1000, [h["inicio"] / 1000 for h in video["hitos"][1:]],
                                    args.musica)
-        print(f"  {len(video['hitos'])} escenas, {duracion / 1000:.0f} s de vídeo")
+        print(_("  {n} escenas, {s} s de vídeo", n=len(video["hitos"]), s=f"{duracion / 1000:.0f}"))
         montaje.renderizar(navegador, trabajo / "video", salida, args.fps, audio, ffmpeg)
         navegador.close()
 
     minutos = (time.time() - t0) / 60
-    print(f"\nHecho en {minutos:.0f} min: {salida}")
-    print(f"  Para cambiar los textos, edita {trabajo / 'rotulos.json'} y relanza (todo lo demás sale de la caché).")
+    print(_("\nHecho en {m} min: {f}", m=f"{minutos:.0f}", f=salida))
+    print(_("  Para cambiar los textos, edita {f} y relanza (todo lo demás sale de la caché).", f=trabajo / "rotulos.json"))
     return 0
 
 
@@ -269,13 +306,13 @@ def _capitulo(repo: Path, rama: str | None, args: argparse.Namespace, navegador,
     print(f"\n{repo}")
     todos = historia.commits(repo, rama)
     if not todos:
-        print("  La rama no tiene commits.")
+        print(_("  La rama no tiene commits."))
         return 2
-    print(f"  {len(todos)} commits en {rama} ({todos[0].fecha} → {todos[-1].fecha})")
+    print(_("  {n} commits en {r} ({a} → {b})", n=len(todos), r=rama, a=todos[0].fecha, b=todos[-1].fecha))
     final = detectar.detectar(repo, todos[-1].sha, args.modo)
     if not final:
-        print("  No encuentro una interfaz que fotografiar: ni Storybook, ni una app web con build o servidor de\n"
-              "  desarrollo, ni un index.html. cronica solo hace vídeos de proyectos con interfaz.")
+        print(_("  No encuentro una interfaz que fotografiar: ni Storybook, ni una app web con build o servidor de\n"
+                "  desarrollo, ni un index.html. cronica solo hace vídeos de proyectos con interfaz."))
         return 3
     tipo = final.tipo
     cands = historia.candidatos(todos)
@@ -284,7 +321,8 @@ def _capitulo(repo: Path, rama: str | None, args: argparse.Namespace, navegador,
         cands = [cands[int(i * paso)] for i in range(PRESELECCION - 1)] + [cands[-1]]
     cands = [c for c in cands if (r := detectar.detectar(repo, c.sha, tipo)) and r.tipo == tipo]
     hitos = historia.muestrear(cands, args.max_hitos, todos)
-    print(f"  tipo: {tipo}{' en ' + final.dir if final.dir else ''} · {len(hitos)} hitos elegidos de {len(cands)} candidatos")
+    print(_("  tipo: {t}{d} · {n} hitos elegidos de {c} candidatos", t=_(tipo),
+            d=_(" en ") + final.dir if final.dir else "", n=len(hitos), c=len(cands)))
     clon = construir.preparar_clon(repo, trabajo)
     preparar = _preparar_para(repo, args.preparar or [])
 
@@ -292,7 +330,7 @@ def _capitulo(repo: Path, rama: str | None, args: argparse.Namespace, navegador,
     max_fotogramas = int(args.segundos * montaje.FPS_CLIP)
     for i, h in enumerate(hitos, 1):
         forzar = primero_forzado and not hechos
-        _, titulo = rotulos.pr_y_titulo(h)
+        _pr, titulo = rotulos.pr_y_titulo(h)
         cab = f"  [{i:2d}/{len(hitos)}] {h.fecha} {h.sha[:7]}  {rotulos.limpiar(titulo)[:48]:<48}"
         fichero = trabajo / "hitos" / h.sha[:12] / "estado.json"
         estado = json.loads(fichero.read_text(encoding="utf-8")) if fichero.exists() else None
@@ -304,9 +342,9 @@ def _capitulo(repo: Path, rama: str | None, args: argparse.Namespace, navegador,
             print(cab, end=" ", flush=True)
             inicio = time.time()
             estado = construir.regrabar(estado, trabajo, navegador, previas, max_fotogramas, forzar)
-            print(f"{_resumen(estado)} (regrabado, {time.time() - inicio:.0f} s)")
+            print(f"{_resumen(estado)} " + _("(regrabado, {s} s)", s=f"{time.time() - inicio:.0f}"))
         elif estado and (estado["ok"] or not args.reintentar):
-            print(f"{cab} (caché) {_resumen(estado)}")
+            print(f"{cab} {_('(caché)')} {_resumen(estado)}")
         else:
             print(cab, end=" ", flush=True)
             receta = detectar.detectar(repo, h.sha, tipo)
@@ -315,7 +353,7 @@ def _capitulo(repo: Path, rama: str | None, args: argparse.Namespace, navegador,
             estado = construir.procesar(h, receta, clon, trabajo, navegador, previas, max_fotogramas, forzar)
             print(f"{_resumen(estado)} ({time.time() - inicio:.0f} s)")
             for aviso in (estado.get("fotos") or {}).get("avisos", []):
-                print(f"        · sin foto: {aviso}")
+                print(_("        · sin foto: {a}", a=aviso))
         if estado["ok"] and not estado["fotos"].get("sin_cambios"):
             hechos.append((h, estado))
             carpeta = trabajo / "hitos" / h.sha[:12]
@@ -332,7 +370,7 @@ def _preparar_para(repo: Path, entradas: list[str]) -> list[str] | None:
         if sep and nombre == repo.name:
             return shlex.split(cmd)
     for e in entradas:
-        nombre, sep, _ = e.partition("=")
+        nombre, sep, _cmd = e.partition("=")
         if not sep or " " in nombre:
             return shlex.split(e)
     return None
@@ -351,10 +389,10 @@ def _escenas(capitulos: list[Capitulo], acompanantes: list[tuple[Path, str]] | N
             antes = capitulos[k - 1]
             ext = historia.extraccion(antes.repo, antes.todos[-1].sha, cap.repo, cap.todos[0].sha)
             n += 1
-            que = "el Storybook" if cap.tipo == "storybook" else "la interfaz"
+            que = _("el Storybook") if cap.tipo == "storybook" else _("la interfaz")
             escenas.append({"tipo": "extraccion", "nn": f"{n:02d}", "de": antes.nombre, "a": cap.nombre,
                             "fecha": cap.todos[0].fecha, "chip": f"{antes.nombre} → {cap.nombre}",
-                            "titulo": f"Extracción: {que} se muda a {cap.nombre}", "barra": f"git · {cap.nombre}", **ext})
+                            "titulo": _("Extracción: {que} se muda a {a}", que=que, a=cap.nombre), "barra": f"git · {cap.nombre}", **ext})
         for h in _datos_hitos(cap.repo, cap.todos, cap.hechos):
             n += 1
             if len(ecosistema) > 1:
@@ -376,7 +414,7 @@ def _paseo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n:
         return None
     carpeta = trabajo / "paseo"
     fichas = [f for f in estado["fotos"]["fichas"] if not any(d in f["key"].lower() for d in montaje.DOCS)]
-    print(f"\n  paseo por {len(fichas)} componentes…", end=" ", flush=True)
+    print(_("\n  paseo por {n} componentes…", n=len(fichas)), end=" ", flush=True)
     with Servidor(sitio) as s:
         fotogramas = recorrido.paseo(navegador, s.url, [{"id": f["id"], "nombre": f["nombre"]} for f in fichas],
                                      carpeta / "clip", int(args.paseo * montaje.FPS_CLIP))
@@ -385,8 +423,8 @@ def _paseo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n:
     ultimo = cap.todos[-1]
     cifras = (historia.cifras_ecosistema(ecosistema, ultimo.fecha) if ecosistema
               else historia.cifras_git(cap.repo, ultimo.sha))
-    return {"nn": f"{n:02d}", "sha": h.sha, "fecha": ultimo.fecha, "dir_clip": str(carpeta), "chip": f"{len(fichas)} componentes · {cap.nombre}",
-            "titulo": f"Todo junto: {len(fichas)} componentes", "cifras": cifras,
+    return {"nn": f"{n:02d}", "sha": h.sha, "fecha": ultimo.fecha, "dir_clip": str(carpeta), "chip": _("{n} componentes · {p}", n=len(fichas), p=cap.nombre),
+            "titulo": _("Todo junto: {n} componentes", n=len(fichas)), "cifras": cifras,
             "fotos": fotos, "dir": str(cap.trabajo), "cap": len(args.carpetas) - 1,
             "barra": f"storybook · {cap.nombre}", "commits": [], "paseo": True}
 
@@ -396,17 +434,17 @@ def _demo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n: 
     """--demo: una escena por parada, grabada sobre el último build (o sobre el «sitio» del fichero, p. ej. un
     build con código que aún no está en la rama). Cada parada lleva su rótulo; se editan en rotulos.json
     («demo:1», «demo:2»…)."""
-    guion = json.loads(Path(args.demo).read_text(encoding="utf-8"))
+    guion = _guion(json.loads(Path(args.demo).read_text(encoding="utf-8")))
     if cap.tipo != "storybook" or not cap.hechos:
         return []
     h, estado = cap.hechos[-1]
     sitio = Path(guion["sitio"]).expanduser() if guion.get("sitio") else cap.trabajo / "hitos" / h.sha[:12] / "sitio"
     if not sitio.is_dir():
-        print(f"  --demo: no encuentro el build «{sitio}»")
+        print(_("  --demo: no encuentro el build «{s}»", s=sitio))
         return []
     pasos = guion["pasos"]
     carpetas = [trabajo / "demo" / f"{k:02d}" for k in range(1, len(pasos) + 1)]
-    print(f"\n  demo de {len(pasos)} paradas…", end=" ", flush=True)
+    print(_("\n  demo de {n} paradas…", n=len(pasos)), end=" ", flush=True)
     with Servidor(sitio) as s:
         fotogramas = recorrido.demo(navegador, s.url, pasos, [c / "clip" for c in carpetas])
     print(f"{sum(fotogramas) / montaje.FPS_CLIP:.0f} s")
@@ -423,25 +461,65 @@ def _demo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n: 
     return escenas
 
 
+MESA = {"title": "titulo", "closing": "cierre", "footer": "pie", "headlines": "rotulos", "notes": "notas",
+        "acts": "actos"}
+ACTO = {"from": "desde", "title": "titulo", "line": "frase"}
+GUION = {"site": "sitio", "steps": "pasos", "date": "fecha"}
+PASO = {"seconds": "segundos", "headline": "rotulo", "actions": "acciones", "date": "fecha"}
+ACCION = {"click": "clic", "use": "usar", "read": "leer", "scroll": "rueda", "drift": "deriva", "in": "en",
+          "wait": "espera", "frames": "fotos"}
+
+
+def _traducir(d: dict, tabla: dict) -> dict:
+    return {tabla.get(k, k): v for k, v in d.items()}
+
+
+def _mesa(d: dict, al_ingles: bool = False) -> dict:
+    """rotulos.json en inglés (title, headlines, acts…) o en español (titulo, rotulos, actos…): por dentro, en español."""
+    if al_ingles:
+        inv, acto = {v: k for k, v in MESA.items()}, {v: k for k, v in ACTO.items()}
+        return {inv.get(k, k): ([_traducir(a, acto) for a in v] if k == "actos" else v) for k, v in d.items()}
+    d = _traducir(d, MESA)
+    d["actos"] = [_traducir(a, ACTO) for a in d.get("actos", [])]
+    return d
+
+
+def _guion(d: dict) -> dict:
+    """demo.json con claves en inglés o en español; «"in": "toolbar"» es «"en": "barra"»."""
+    d = _traducir(d, GUION)
+    pasos = []
+    for paso in d.get("pasos", []):
+        paso = _traducir(paso, PASO)
+        acciones = []
+        for a in paso.get("acciones", []):
+            a = _traducir(a, ACCION)
+            if a.get("en") == "toolbar":
+                a["en"] = "barra"
+            acciones.append(a)
+        pasos.append({**paso, "acciones": acciones})
+    return {**d, "pasos": pasos}
+
+
 def _resumen(estado: dict) -> str:
     if not estado["ok"]:
-        return f"salta: {estado['motivo']} (log: {estado['log']})"
+        return _("salta: {m} (log: {l})", m=_(estado["motivo"]), l=estado["log"])
     f = estado["fotos"]
     if f.get("sin_cambios"):
-        return "sin cambios a la vista: no sale"
+        return _("sin cambios a la vista: no sale")
     partes = []
     if f.get("nuevas"):
-        partes.append(f"{len(f['nuevas'])} nuevas")
+        partes.append(_("{n} nuevas", n=len(f["nuevas"])))
     if f.get("cambiadas"):
-        partes.append(f"{len(f['cambiadas'])} cambian")
-    return f"ok, {', '.join(partes) or 'arranque'}; en uso: {', '.join(f.get('focos', []))} ({f.get('fotogramas', 0) / 30:.1f} s)"
+        partes.append(_("{n} cambian", n=len(f["cambiadas"])))
+    return _("ok, {p}; en uso: {f} ({s} s)", p=", ".join(partes) or _("arranque"),
+             f=", ".join(_(x) for x in f.get("focos", [])), s=f"{f.get('fotogramas', 0) / 30:.1f}")
 
 
 def _datos_hitos(repo: Path, todos: list[historia.Commit], hechos: list[tuple[historia.Commit, dict]]) -> list[dict]:
     posicion = {c.sha: i for i, c in enumerate(todos)}
     salida, vistas, anterior = [], set(), -1
     for k, (h, estado) in enumerate(hechos, 1):
-        _, titulo = rotulos.pr_y_titulo(h)
+        _pr, titulo = rotulos.pr_y_titulo(h)
         claves = [f["key"] for f in estado["fotos"]["fichas"]]
         entre = todos[anterior + 1: posicion[h.sha] + 1]
         anterior = posicion[h.sha]
@@ -472,14 +550,14 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
     Lo que falte se toma del rotulos.json de cada repositorio (lo que se escribió en vídeos de uno solo).
     """
     fichero = trabajo / "rotulos.json"
-    guardado = json.loads(fichero.read_text(encoding="utf-8")) if fichero.exists() else {}
+    guardado = _mesa(json.loads(fichero.read_text(encoding="utf-8"))) if fichero.exists() else {}
     por_clave = guardado.get("rotulos", {})
     notas = guardado.get("notas", {})
     titulo, cierre = guardado.get("titulo"), guardado.get("cierre", "")
     for otro in otros:
         f = otro / "rotulos.json"
         if f != fichero and f.exists():
-            previo = json.loads(f.read_text(encoding="utf-8"))
+            previo = _mesa(json.loads(f.read_text(encoding="utf-8")))
             for k, v in previo.get("rotulos", {}).items():
                 por_clave.setdefault(k, v)
             for k, v in previo.get("notas", {}).items():
@@ -489,23 +567,24 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
     titulo = titulo or nombre
     hitos = [e for e in escenas if e.get("tipo") != "extraccion" and not e.get("paseo")]
     if args.ia is not None:
-        print("  escribiendo los rótulos con el modelo local…", end=" ", flush=True)
+        print(_("  escribiendo los rótulos con el modelo local…"), end=" ", flush=True)
         try:
-            ia = rotulos.con_ia(nombre, hitos, args.ia or None)
+            ia = rotulos.con_ia(nombre, hitos, args.ia or None, i18n.idioma)
             por_nn = {h["nn"]: _clave(h) for h in hitos}
             por_clave.update({por_nn[nn]: texto for nn, texto in ia["rotulos"].items() if nn in por_nn})
             titulo, cierre = ia["titulo"], ia["cierre"]
             print("ok")
         except Exception as error:
-            print(f"no ha podido ({str(error)[:120]}); uso los títulos de los commits")
+            print(_("no ha podido ({e}); uso los títulos de los commits", e=str(error)[:120]))
     for e in escenas:
         por_clave.setdefault(_clave(e), e["titulo"])
     # «notas»: una línea opcional por escena, el porqué del cambio, como subtítulo (mismas claves que «rotulos»).
     # «actos»: [{desde: clave, titulo, frase}]: un cartel que abre cada parte del vídeo, antes de esa escena.
     # «pie»: una línea pequeña bajo el cierre.
     actos, pie = guardado.get("actos", []), guardado.get("pie", "")
-    fichero.write_text(json.dumps({"titulo": titulo, "cierre": cierre, "pie": pie, "rotulos": por_clave, "notas": notas,
-                                   "actos": actos}, indent=1, ensure_ascii=False), encoding="utf-8")
+    mesa = {"titulo": titulo, "cierre": cierre, "pie": pie, "rotulos": por_clave, "notas": notas, "actos": actos}
+    fichero.write_text(json.dumps(mesa if i18n.idioma == "es" else _mesa(mesa, al_ingles=True), indent=1,
+                                  ensure_ascii=False), encoding="utf-8")
     por_nn = {_clave(e): e["nn"] for e in escenas}
     return {"titulo": titulo, "cierre": cierre, "pie": pie, "rotulos": {e["nn"]: por_clave[_clave(e)] for e in escenas},
             "notas": {e["nn"]: notas[_clave(e)] for e in escenas if notas.get(_clave(e))},
