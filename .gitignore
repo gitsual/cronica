@@ -4,3 +4,4 @@ build/
 dist/
 *.mp4
 *.spec
+!assets/video/*.mp4
