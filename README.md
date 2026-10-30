@@ -16,7 +16,7 @@ This one is written by your git history, and the photographs are taken by a brow
   <img alt="version 0.4.0" src="https://img.shields.io/badge/version-0.4.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
-  <img alt="41 tests" src="https://img.shields.io/badge/tests-41-191612?style=for-the-badge&labelColor=191612&color=5A5247">
+  <img alt="49 tests" src="https://img.shields.io/badge/tests-49-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="runs offline" src="https://img.shields.io/badge/runs-offline-191612?style=for-the-badge&labelColor=191612&color=B3301C">
 </p>
 
@@ -26,6 +26,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <a href="#how-an-issue-is-made"><strong>How it works</strong></a> ·
 <a href="#what-makes-the-news"><strong>What makes the news</strong></a> ·
 <a href="#music"><strong>Music</strong></a> ·
+<a href="#the-newsroom-settings"><strong>Settings</strong></a> ·
 <a href="#languages"><strong>Languages</strong></a> ·
 <a href="#options"><strong>Options</strong></a> ·
 <a href="#the-news-desk-rotulosjson"><strong>News desk</strong></a> ·
@@ -71,9 +72,9 @@ cronica C:\projects\my-app
 |---|---|
 | **What it photographs** | Storybook (every component, light and dark), web apps (Vite, Angular, React, Vue, Next, Astro, Svelte…) and plain HTML |
 | **What it needs from you** | the folder. Nothing in it is checked out, installed or written |
-| **What it never does** | send anything anywhere. The optional AI headlines use a model on your machine |
+| **What it never does** | send anything anywhere. The optional AI headlines use a model on your machine, or the server you choose |
 | **What you can change** | every headline, without building again: [`rotulos.json`](#the-news-desk-rotulosjson) |
-| **Which language** | English by default; the console and the film in Spanish with `--lang es` ([more](#languages)) |
+| **Which language, which model** | chosen in [its own window](#the-newsroom-settings), *the newsroom*: English or Spanish, and the AI model that writes the headlines |
 
 ---
 
@@ -128,6 +129,9 @@ you, issue by issue, what it found:
 
 <p align="center"><sub>The real output of the run that made the film above; only the waiting has been cut.</sub></p>
 
+**To change the language or the AI model,** double-click `cronica.exe` without dropping anything: it opens
+[the newsroom](#the-newsroom-settings), its settings window.
+
 **3. Watch.** The film is next to your project folder. If a headline reads badly, open the `rotulos.json` the console
 names at the end, change it, and drop the folder again: only the film is printed again, everything else comes from
 the cache.
@@ -139,15 +143,15 @@ the cache.
 <details>
 <summary><b>La misma guía, en español</b></summary>
 
-cronica habla español con `--lang es` (o con la variable `CRONICA_LANG=es`): la consola, el vídeo (*Núm.*, *En cifras*,
+cronica habla español: elígelo una vez en **la redacción**, su ventana de ajustes (doble clic en `cronica.exe` sin carpeta, o `cronica --settings`), donde también se elige el modelo de IA que escribe los titulares. También vale `--lang es` o `CRONICA_LANG=es`. En español sale todo: la consola, el vídeo (*Núm.*, *En cifras*,
 *Hemeroteca*, *Última edición*), las fechas y los titulares que escribe la IA. Las opciones también se pueden escribir
 en español: `--musica`, `--estetica`, `--previa`, `--ocultar lineas`…
 
 1. **Descarga.** De la [última versión](https://github.com/gitsual/cronica/releases/latest), baja
    `cronica-<versión>-windows.zip` (unos 126 MB, con ffmpeg dentro). El Chromium de Playwright se descarga solo la
    primera vez.
-2. **Arrastra o lanza.** Descomprime donde quieras. Desde una consola: `cronica.exe C:\proyectos\mi-app --lang es`;
-   arrastrando la carpeta sobre `cronica.exe` sale en inglés, salvo que tengas `CRONICA_LANG=es` en el entorno.
+2. **Elige el idioma y arrastra.** Descomprime donde quieras, haz doble clic en `cronica.exe`, elige *Español* en la
+   redacción y guarda. Luego arrastra la carpeta de tu proyecto sobre `cronica.exe`.
 3. **Mira.** El vídeo queda al lado de la carpeta, como `<carpeta>-evolucion.mp4`. Para cambiar un titular, edita el
    `rotulos.json` que te indica al final y vuelve a lanzarlo: solo se vuelve a grabar el vídeo.
 
@@ -270,6 +274,28 @@ every scene change lands on it.
 
 ---
 
+<a id="the-newsroom-settings"></a>
+
+## The newsroom: settings
+
+Everything that is a matter of taste is chosen in cronica's own window, *the newsroom*: the language, the model that
+writes the headlines, the music, the look and the length. Double-click `cronica.exe` without a folder, or run
+`cronica --settings`. What you save there is the default of every film; an option on the command line still wins
+for that one run.
+
+<p align="center"><img src="assets/newsroom.png" alt="The newsroom: the masthead in gothic type, Language with English and Español, Headlines by AI with Off, Ollama and an OpenAI-compatible server, the server address, the model qwen3-coder:30b chosen from a list and the note «qwen3-coder:30b answered OK», then the music, the look, issues at most, seconds of app in use and the Save button" width="70%"></p>
+
+| | |
+|---|---|
+| **Language** | English or Español, for the console, the film, its dates and the AI headlines |
+| **Headlines by AI** | *Off* (headlines are the pull request titles), *Ollama* on this machine, or any *OpenAI-compatible server* (LM Studio, llama-server, vLLM, LiteLLM…) with its address and, if it needs one, an API key. *Find models* lists what the server offers; *Test* asks the chosen model a one-word question |
+| **The film** | the music, the look, issues at most and seconds of app in use |
+
+The settings live in `%APPDATA%\cronica\settings.json` (Windows) or `~/.config/cronica/settings.json` (Linux);
+`CRONICA_CONFIG` points elsewhere. The window is served on `127.0.0.1` only, and the API key stays in that file.
+
+---
+
 <a id="languages"></a>
 
 ## Languages
@@ -280,7 +306,7 @@ closing line), the screen names it adds, and the headlines the local model write
 
 | | English | Spanish |
 |---|---|---|
-| Choose it | default | `--lang es`, or `CRONICA_LANG=es` for every run |
+| Choose it | default | in [the newsroom](#the-newsroom-settings), once; or `--lang es`, or `CRONICA_LANG=es` |
 | The film | *The garden Chronicle* · *No. 8 of 9* · *By the numbers* · *Archive* · *Final edition* | *Crónica de huerto* · *Núm. 8 de 9* · *En cifras* · *Hemeroteca* · *Última edición* |
 | Dates | Tuesday, June 9, 2026 · 9 JUN 2026 | Martes, 9 de junio de 2026 · 9 JUN 2026 |
 | Output | `<folder>-evolution.mp4` | `<folder>-evolucion.mp4` |
@@ -297,12 +323,13 @@ Headlines that come from your pull request titles stay as they were written. The
 
 | | |
 |---|---|
+| `--settings` | opens [the newsroom](#the-newsroom-settings), the settings window (also: double-click `cronica.exe`) |
 | `--lang en\|es` | the [language](#languages) of the console and the film |
 | `-o, --output X.mp4` | where the film goes |
 | `-n, --max-milestones 30` | issues at most |
 | `--branch develop` | another branch (also `origin/develop`) |
 | `--mode storybook\|web\|static` | force what is photographed |
-| `--ai [model]` | headlines from Ollama (`127.0.0.1:11434`) or any OpenAI-compatible server (`CRONICA_LLM=http://127.0.0.1:1234/v1`). Nothing leaves the machine |
+| `--ai [model]` | headlines written by the model chosen in the settings; without one, Ollama on `127.0.0.1:11434` (`CRONICA_LLM=http://…/v1` points it at an OpenAI-compatible server) |
 | `--music console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
 | `--look newspaper\|classic\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
 | `--seconds 6` | seconds of app in use per issue, at most |
@@ -387,6 +414,7 @@ About 3,000 lines of Python and two players in HTML. Each step of the [process](
 | [`cambios.py`](cronica/cambios.py) | what changed on screen |
 | [`rotulos.py`](cronica/rotulos.py) | headlines from titles or from a local model |
 | [`i18n.py`](cronica/i18n.py) | the languages: the message table, the dates, the words of the film |
+| [`ajustes.py`](cronica/ajustes.py) · [`redaccion/`](cronica/redaccion/ajustes.html) | the settings file and the newsroom window that edits it |
 | [`montaje.py`](cronica/montaje.py) | `datos.json`, the player frame by frame, ffmpeg |
 | [`musica.py`](cronica/musica.py) | the three scores, synthesised with NumPy |
 | [`reproductor/esteticas/`](cronica/reproductor/esteticas) | `diario.html` (newspaper) and `clasica.html` (classic): the film is a web page, sought frame by frame |
@@ -425,7 +453,7 @@ through corepack).
 
 | Suite | Command | Result for 0.4.0 |
 |---|---|---|
-| Unit and end to end | `python -m pytest -q` | 41 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, and both languages |
+| Unit and end to end | `python -m pytest -q` | 49 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, and the settings window against a fake model server |
 | The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
 | The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crónica · The newsroom</title>
+<style>
+  /* La redacción: los ajustes de cronica, con el papel, la tinta y el sello del diario. */
+  @font-face { font-family: "UnifrakturMaguntia"; src: url(/fonts/UnifrakturMaguntia.ttf); }
+  @font-face { font-family: "Newsreader"; src: url(/fonts/Newsreader.ttf); font-weight: 200 800; }
+  @font-face { font-family: "Newsreader"; src: url(/fonts/Newsreader-Italic.ttf); font-style: italic; font-weight: 200 800; }
+  @font-face { font-family: "IBM Plex Mono"; src: url(/fonts/IBMPlexMono-Medium.woff2); }
+  :root {
+    --papel: #EDE6D6; --papel-2: #E4DBC6; --tinta: #191612; --gastada: #5A5247; --sello: #B3301C;
+    --serif: "Newsreader", Georgia, serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--papel); color: var(--tinta); font: 19px/1.45 var(--serif); padding: 34px 44px 40px; }
+  .mono { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+  .doble { border-top: 3px solid var(--tinta); border-bottom: 1px solid var(--tinta); height: 6px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; }
+  h1 { font: 58px/1 "UnifrakturMaguntia", serif; }
+  header .mono { color: var(--gastada); text-align: right; }
+  .lema { font-style: italic; color: var(--gastada); margin: 10px 0 18px; }
+  section { padding: 20px 0 22px; border-bottom: 1px solid var(--tinta); }
+  h2 { font: 800 30px/1.1 var(--serif); margin-bottom: 4px; }
+  h2 + p { font-style: italic; color: var(--gastada); margin-bottom: 14px; font-size: 17px; }
+  .opciones { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .opcion { position: relative; border: 1px solid var(--tinta); padding: 12px 14px 12px 40px; cursor: pointer; background: transparent; }
+  .opcion input { position: absolute; left: 14px; top: 17px; accent-color: var(--sello); width: 16px; height: 16px; }
+  .opcion b { display: block; font-weight: 800; font-size: 20px; }
+  .opcion small { display: block; font-style: italic; color: var(--gastada); font-size: 15px; line-height: 1.3; margin-top: 2px; }
+  .opcion:has(input:checked) { background: var(--papel-2); box-shadow: inset 0 0 0 2px var(--tinta); }
+  .campos { display: grid; grid-template-columns: 170px 1fr; gap: 10px 16px; align-items: center; margin-top: 16px; }
+  .campos > label { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--gastada); }
+  input[type=text], input[type=password], input[type=number], select {
+    font: 17px var(--mono); color: var(--tinta); background: #F6F1E6; border: 1px solid var(--tinta);
+    border-radius: 0; padding: 8px 10px; width: 100%;
+  }
+  .fila { display: flex; gap: 8px; }
+  .fila select, .fila input { flex: 1; }
+  button {
+    font: 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+    border: 1px solid var(--tinta); background: transparent; color: var(--tinta); padding: 9px 14px; white-space: nowrap;
+  }
+  button:hover { background: var(--papel-2); }
+  button.tinta { background: var(--tinta); color: var(--papel); font-size: 14px; padding: 14px 26px; }
+  button.tinta:hover { background: #2c2720; }
+  .estado { font-style: italic; color: var(--gastada); min-height: 1.4em; margin-top: 10px; font-size: 17px; }
+  .estado.mal { color: var(--sello); }
+  .estado.bien::before { content: "✓ "; color: var(--sello); font-style: normal; }
+  [hidden] { display: none !important; }
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 24px; }
+  footer .mono { color: var(--gastada); font-size: 11px; word-break: break-all; }
+  #sello {
+    position: fixed; right: 64px; bottom: 96px; width: 170px; height: 170px; border-radius: 50%;
+    border: 5px double var(--sello); color: var(--sello); display: grid; place-items: center;
+    font: 800 21px var(--serif); letter-spacing: .02em; text-transform: uppercase; pointer-events: none; text-align: center;
+    opacity: 0; transform: rotate(-12deg) scale(1.6);
+  }
+  #sello.cae { animation: cae 2.2s ease-out forwards; }
+  @keyframes cae {
+    0% { opacity: 0; transform: rotate(-12deg) scale(1.6); }
+    12% { opacity: .92; transform: rotate(-12deg) scale(1); }
+    80% { opacity: .92; } 100% { opacity: 0; transform: rotate(-12deg) scale(1); }
+  }
+  @media (max-width: 640px) {
+    body { padding: 20px 16px; } h1 { font-size: 40px; } .campos { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 data-t="titulo">The newsroom</h1>
+  <div class="mono" id="version"></div>
+</header>
+<div class="doble"></div>
+<p class="lema" data-t="lema"></p>
+
+<section>
+  <h2 data-t="idioma"></h2>
+  <p data-t="idioma_p"></p>
+  <div class="opciones">
+    <label class="opcion"><input type="radio" name="lang" value="en"><b>English</b><small>The garden Chronicle · No. 8 of 9</small></label>
+    <label class="opcion"><input type="radio" name="lang" value="es"><b>Español</b><small>Crónica de huerto · Núm. 8 de 9</small></label>
+  </div>
+</section>
+
+<section>
+  <h2 data-t="ia"></h2>
+  <p data-t="ia_p"></p>
+  <div class="opciones">
+    <label class="opcion"><input type="radio" name="backend" value="off"><b data-t="off"></b><small data-t="off_p"></small></label>
+    <label class="opcion"><input type="radio" name="backend" value="ollama"><b>Ollama</b><small data-t="ollama_p"></small></label>
+    <label class="opcion"><input type="radio" name="backend" value="openai"><b data-t="openai"></b><small data-t="openai_p"></small></label>
+  </div>
+  <div class="campos" id="campos-ia">
+    <label for="url" data-t="servidor"></label>
+    <input type="text" id="url" spellcheck="false">
+    <label for="key" data-t="clave" class="solo-openai"></label>
+    <input type="password" id="key" class="solo-openai" autocomplete="off" spellcheck="false">
+    <label for="model" data-t="modelo"></label>
+    <div class="fila">
+      <select id="model"></select>
+      <input type="text" id="model-libre" spellcheck="false" hidden>
+      <button type="button" id="refrescar" data-t="buscar"></button>
+      <button type="button" id="probar" data-t="probar"></button>
+    </div>
+  </div>
+  <p class="estado" id="estado-ia"></p>
+</section>
+
+<section>
+  <h2 data-t="pelicula"></h2>
+  <p data-t="pelicula_p"></p>
+  <div class="campos" style="margin-top:0">
+    <label data-t="musica"></label>
+    <div class="opciones">
+      <label class="opcion"><input type="radio" name="music" value="consola"><b data-t="consola"></b><small data-t="consola_p"></small></label>
+      <label class="opcion"><input type="radio" name="music" value="noticiario"><b data-t="noticiario"></b><small data-t="noticiario_p"></small></label>
+      <label class="opcion"><input type="radio" name="music" value="ambiente"><b data-t="ambiente"></b><small data-t="ambiente_p"></small></label>
+    </div>
+    <label data-t="estetica"></label>
+    <div class="opciones">
+      <label class="opcion"><input type="radio" name="look" value="diario"><b data-t="diario"></b><small data-t="diario_p"></small></label>
+      <label class="opcion"><input type="radio" name="look" value="clasica"><b data-t="clasica"></b><small data-t="clasica_p"></small></label>
+    </div>
+    <label for="max" data-t="hitos"></label>
+    <input type="number" id="max" min="2" max="200" style="max-width:140px">
+    <label for="seconds" data-t="segundos"></label>
+    <input type="number" id="seconds" min="1" max="60" step="0.5" style="max-width:140px">
+  </div>
+</section>
+
+<footer>
+  <div class="mono" id="ruta"></div>
+  <button class="tinta" id="guardar" data-t="guardar"></button>
+</footer>
+<div id="sello" data-t="guardado"></div>
+
+<script>
+const T = {
+  en: {
+    titulo: 'The newsroom', lema: 'What you choose here is how every film comes out, unless an option on the command line says otherwise.',
+    idioma: 'Language', idioma_p: 'Of the console, the film, its dates and the headlines the AI writes.',
+    ia: 'Headlines by AI', ia_p: 'A model reads each pull request and writes its headline. Without one, the headline is the pull request\'s title.',
+    off: 'Off', off_p: 'Headlines from the titles, as they were written.',
+    ollama_p: 'A model on this machine. Nothing leaves it.',
+    openai: 'OpenAI-compatible server', openai_p: 'LM Studio, llama-server, vLLM, LiteLLM… on this machine or on your network.',
+    servidor: 'Server', clave: 'API key', modelo: 'Model', buscar: 'Find models', probar: 'Test',
+    pelicula: 'The film', pelicula_p: 'How it sounds, how it looks, and how long it is.',
+    musica: 'Music', consola: 'Console', consola_p: 'A cheerful swing tune, like a console menu.',
+    noticiario: 'Newsreel', noticiario_p: 'A cinema newsreel march, brass and snare.',
+    ambiente: 'Ambient', ambiente_p: 'A pad with no melody, a chord per scene.',
+    estetica: 'Look', diario: 'Newspaper', diario_p: 'A front page per pull request.',
+    clasica: 'Classic', clasica_p: 'A dark, quiet stage.',
+    hitos: 'Issues at most', segundos: 'Seconds of app in use',
+    guardar: 'Save', guardado: 'Saved', archivo: 'Settings file',
+    buscando: 'Asking the server for its models…', sin_modelos: 'The server answers, but has no models.',
+    n_modelos: n => `${n} model${n === 1 ? '' : 's'} found.`, no_responde: 'The server does not answer: ',
+    probando: 'Asking the model a one-word question…', responde: (m, r) => `${m || 'The model'} answered «${r}».`,
+    elige: '(the first one available)', escribir: 'Type a model name…'
+  },
+  es: {
+    titulo: 'La redacción', lema: 'Lo que elijas aquí es como sale cada vídeo, salvo que una opción en la línea de órdenes diga otra cosa.',
+    idioma: 'Idioma', idioma_p: 'El de la consola, el vídeo, sus fechas y los titulares que escribe la IA.',
+    ia: 'Titulares con IA', ia_p: 'Un modelo lee cada pull request y escribe su titular. Sin modelo, el titular es el título del pull request.',
+    off: 'Apagado', off_p: 'Titulares desde los títulos, tal cual se escribieron.',
+    ollama_p: 'Un modelo en esta máquina. No sale nada de ella.',
+    openai: 'Servidor compatible con OpenAI', openai_p: 'LM Studio, llama-server, vLLM, LiteLLM… en esta máquina o en tu red.',
+    servidor: 'Servidor', clave: 'Clave de API', modelo: 'Modelo', buscar: 'Buscar modelos', probar: 'Probar',
+    pelicula: 'El vídeo', pelicula_p: 'Cómo suena, cómo se ve y cuánto dura.',
+    musica: 'Música', consola: 'Consola', consola_p: 'Una canción alegre con swing, como un menú de consola.',
+    noticiario: 'Noticiario', noticiario_p: 'Una marcha de noticiario de cine, metales y caja.',
+    ambiente: 'Ambiente', ambiente_p: 'Un fondo sin melodía, un acorde por escena.',
+    estetica: 'Estética', diario: 'Diario', diario_p: 'Una primera plana por pull request.',
+    clasica: 'Clásica', clasica_p: 'Un escenario oscuro y sobrio.',
+    hitos: 'Números como mucho', segundos: 'Segundos de app en uso',
+    guardar: 'Guardar', guardado: 'Guardado', archivo: 'Fichero de ajustes',
+    buscando: 'Pidiendo al servidor sus modelos…', sin_modelos: 'El servidor responde, pero no tiene modelos.',
+    n_modelos: n => `${n} modelo${n === 1 ? '' : 's'} encontrado${n === 1 ? '' : 's'}.`, no_responde: 'El servidor no responde: ',
+    probando: 'Haciendo al modelo una pregunta de una palabra…', responde: (m, r) => `${m || 'El modelo'} ha contestado «${r}».`,
+    elige: '(el primero que haya)', escribir: 'Escribe el nombre de un modelo…'
+  }
+}
+const DEFECTO = { ollama: 'http://127.0.0.1:11434', openai: 'http://127.0.0.1:1234/v1' }
+const $ = id => document.getElementById(id)
+const marcado = n => document.querySelector(`input[name=${n}]:checked`)?.value
+const marcar = (n, v) => { const el = document.querySelector(`input[name=${n}][value="${v}"]`); if (el) el.checked = true }
+let lang = 'en', guardado = null, ruta = '', version = ''
+
+function traducir () {
+  const t = T[lang]
+  document.documentElement.lang = lang
+  document.title = `Crónica · ${t.titulo}`
+  const hoy = new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  $('version').innerHTML = `cronica ${version}<br>${hoy}`
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t[el.dataset.t] })
+  $('ruta').textContent = `${t.archivo} · ${ruta}`
+  $('model-libre').placeholder = t.escribir
+  const primera = $('model').querySelector('option[value=""]')
+  if (primera) primera.textContent = t.elige
+}
+
+function ia () {
+  const backend = marcado('backend')
+  const libre = !$('model-libre').hidden
+  return { backend, url: $('url').value.trim(), key: $('key').value, model: libre ? $('model-libre').value.trim() : $('model').value }
+}
+
+function estado (texto, clase = '') { const e = $('estado-ia'); e.textContent = texto; e.className = `estado ${clase}` }
+
+function verIa () {
+  const backend = marcado('backend')
+  $('campos-ia').hidden = backend === 'off'
+  document.querySelectorAll('.solo-openai').forEach(el => { el.hidden = backend !== 'openai' })
+  $('url').placeholder = DEFECTO[backend] || ''
+  if (backend === 'off') estado('')
+}
+
+function ponerModelos (lista, actual) {
+  const sel = $('model')
+  sel.innerHTML = ''
+  const vacia = document.createElement('option'); vacia.value = ''; vacia.textContent = T[lang].elige; sel.appendChild(vacia)
+  for (const m of lista) { const o = document.createElement('option'); o.value = o.textContent = m; sel.appendChild(o) }
+  if (actual && !lista.includes(actual)) { const o = document.createElement('option'); o.value = o.textContent = actual; sel.appendChild(o) }
+  sel.value = actual || ''
+}
+
+async function api (ruta, datos) {
+  const r = await fetch(ruta, { method: datos ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, body: datos ? JSON.stringify(datos) : undefined })
+  const j = await r.json()
+  if (!r.ok) throw new Error(j.error || r.statusText)
+  return j
+}
+
+async function buscarModelos () {
+  const actual = ia().model
+  if (marcado('backend') === 'off') return
+  estado(T[lang].buscando)
+  try {
+    const { models } = await api('/api/models', ia())
+    $('model').hidden = false; $('model-libre').hidden = true
+    ponerModelos(models, actual)
+    estado(models.length ? T[lang].n_modelos(models.length) : T[lang].sin_modelos, models.length ? 'bien' : 'mal')
+  } catch (e) {
+    // Sin lista (servidor apagado o sin /models): el nombre se escribe a mano.
+    $('model').hidden = true; $('model-libre').hidden = false; $('model-libre').value = actual
+    estado(T[lang].no_responde + e.message, 'mal')
+  }
+}
+
+async function probar () {
+  estado(T[lang].probando)
+  try {
+    const { answer } = await api('/api/test', ia())
+    estado(T[lang].responde(ia().model, answer), 'bien')
+  } catch (e) { estado(T[lang].no_responde + e.message, 'mal') }
+}
+
+async function guardar () {
+  const datos = {
+    lang, ai: ia(), music: marcado('music'), look: marcado('look'),
+    max_milestones: Number($('max').value), seconds: Number($('seconds').value)
+  }
+  const { settings } = await api('/api/settings', datos)
+  guardado = settings
+  const s = $('sello'); s.classList.remove('cae'); void s.offsetWidth; s.classList.add('cae')
+}
+
+async function cargar () {
+  const d = await api('/api/settings')
+  const s = d.settings
+  guardado = s; ruta = d.path; lang = s.lang; version = d.version
+  marcar('lang', s.lang); marcar('backend', s.ai.backend); marcar('music', s.music); marcar('look', s.look)
+  $('url').value = s.ai.url; $('key').value = s.ai.key
+  $('max').value = s.max_milestones; $('seconds').value = s.seconds
+  ponerModelos([], s.ai.model)
+  traducir(); verIa()
+  if (s.ai.backend !== 'off') buscarModelos()
+}
+
+document.querySelectorAll('input[name=lang]').forEach(r => r.addEventListener('change', () => { lang = marcado('lang'); traducir() }))
+document.querySelectorAll('input[name=backend]').forEach(r => r.addEventListener('change', () => { verIa(); buscarModelos() }))
+$('url').addEventListener('change', buscarModelos)
+$('refrescar').addEventListener('click', buscarModelos)
+$('probar').addEventListener('click', probar)
+$('guardar').addEventListener('click', guardar)
+document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); guardar() } })
+document.fonts.load('58px UnifrakturMaguntia').finally(cargar)
+</script>
+</body>
+</html>

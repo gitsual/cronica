@@ -50,6 +50,12 @@ class Repo:
         return self.git("rev-parse", "HEAD")
 
 
+@pytest.fixture(autouse=True)
+def _ajustes_aislados(tmp_path_factory, monkeypatch):
+    """Ningún test lee ni escribe los ajustes de verdad del usuario."""
+    monkeypatch.setenv("CRONICA_CONFIG", str(tmp_path_factory.mktemp("conf") / "settings.json"))
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> Repo:
     return Repo(tmp_path / "proyecto")
