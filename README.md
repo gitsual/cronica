@@ -30,7 +30,7 @@ cronica C:\proyectos\mi-app
    Bitbucket y Azure DevOps, quita claves de Jira y prefijos `feat:`. Con `--ia`, los escribe un modelo
    **local**.
 5. **Graba** el reproductor fotograma a fotograma (1080p, 30 fps) y le pone una música generada, sin
-   derechos, que cambia de acorde con cada hito.
+   derechos (`--musica` para elegir el estilo o poner la tuya).
 
 Todo queda en caché. Si se corta o falla, al relanzar sigue donde lo dejó. Para cambiar un texto, edita
 `rotulos.json` (cronica dice dónde está al terminar) y relanza: solo se vuelve a grabar el vídeo.
@@ -60,15 +60,52 @@ IBM Plex Mono, las tres con licencia SIL OFL (`cronica/reproductor/fonts/`).
 | `--rama develop` | otra rama (también `origin/develop`) |
 | `--modo storybook\|web\|estatico` | forzar lo que se fotografía |
 | `--ia [modelo]` | rótulos con Ollama (`127.0.0.1:11434`) o con un servidor compatible con OpenAI (`CRONICA_LLM=http://127.0.0.1:1234/v1`). Nada sale de la máquina. |
+| `--musica consola\|noticiario\|ambiente` | la música generada: `consola` (por defecto), una canción alegre de salón con swing, como los menús de consola; `noticiario`, una marcha de noticiario de cine con metales y caja, a juego con el diario; `ambiente`, un fondo sin melodía que cambia de acorde con cada escena |
 | `--musica pista.mp3` / `--sin-musica` | música propia o ninguna |
 | `--estetica diario\|clasica` | cómo se ve el vídeo: el diario (por defecto) o la clásica, oscura y sobria. También vale la ruta de un `.html` propio que lea `datos.json` y exponga `seek()` como los de `cronica/reproductor/esteticas/` |
-| `--segundos 3.6` | duración de cada hito |
+| `--segundos 6` | segundos como mucho de app en uso por hito |
+| `--ocultar lineas` | una cifra que no sale en el vídeo (se puede repetir) |
+| `--nombre carpeta=nombre` | el nombre con el que sale un repositorio (si se ha renombrado) |
+| `--tambien otra-carpeta` | un repositorio que no sale en pantalla pero cuenta en las cifras |
+| `--paseo [60]` | al final, un paseo por todos los componentes cambiando los temas de Storybook |
+| `--demo demo.json` | al final, una demo guiada de Storybook (ver abajo) |
 | `--previa` | no graba el vídeo: deja un fotograma por escena para revisar |
 | `--reintentar` | vuelve a construir los hitos que fallaron |
 | `--desde-cero` | borra la caché de este proyecto |
 
 La caché está en `%LOCALAPPDATA%\cronica` (Windows) o en `~/.cache/cronica` (Linux), con una carpeta por
 proyecto. Dentro, `logs/` guarda la salida de cada instalación y cada build.
+
+### La mesa de redacción: `rotulos.json`
+
+Además de un rótulo por escena (`rotulos`), admite:
+
+- `titulo` y `cierre`: la portada y la frase de la última edición; `pie`, una línea pequeña debajo del cierre.
+- `notas`: una línea por escena, como subtítulo (mismas claves que `rotulos`).
+- `actos`: `[{"desde": "<clave de escena>", "titulo": "…", "frase": "…"}]`. Antes de esa escena entra un
+  cartel con «Acto I», «Acto II»… Sirve para contar el vídeo por partes.
+
+### La demo guiada: `--demo demo.json`
+
+```json
+{
+ "sitio": "~/mi-sb/storybook-static",
+ "pasos": [
+  {"story": "inicio--guia", "segundos": 5, "rotulo": "La guía", "acciones": [{"leer": true}]},
+  {"story": "button--primary", "segundos": 6, "acciones": [{"global": "Dark"}, {"clic": "button"}, {"usar": 1}]}
+ ]
+}
+```
+
+Cada paso es una escena grabada en vivo. Las acciones posibles son:
+- `global`: cambia una opción de la barra de Storybook;
+- `clic`: pulsa un selector de la story, o de Storybook con `"en": "barra"`;
+- `usar`: toca los controles de la story;
+- `leer`: recorre el texto con el cursor;
+- `rueda`: desplaza la página.
+
+`sitio` es opcional; si no se da, la demo se graba sobre el último build. En el diario estas escenas salen
+como «Edición en directo» y no cuentan como números.
 
 ## Requisitos
 

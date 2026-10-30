@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import __version__, cambios, construir, detectar, historia, montaje, recorrido, rotulos
+from . import __version__, cambios, construir, detectar, historia, montaje, musica, recorrido, rotulos
 from .servidor import Servidor
 
 PRESELECCION = 300  # candidatos que se miran como mucho antes de muestrear (detectar cuesta un ls-tree)
@@ -74,7 +74,9 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
                     help="qué se fotografía; auto = Storybook si lo hay, si no la app, si no un index.html")
     ap.add_argument("--ia", nargs="?", const="", metavar="MODELO",
                     help="rótulos escritos por un modelo local (Ollama en :11434 o CRONICA_LLM=http://…/v1)")
-    ap.add_argument("--musica", help="un fichero de audio para el fondo (por defecto se genera una)")
+    ap.add_argument("--musica", metavar="ESTILO|FICHERO", default="consola",
+                    help="la música de fondo: un estilo generado (consola, por defecto; noticiario; ambiente) "
+                         "o un fichero de audio propio")
     ap.add_argument("--sin-musica", action="store_true")
     ap.add_argument("--segundos", type=float, default=6.0, help="segundos como mucho de app en uso por hito (6)")
     ap.add_argument("--fps", type=int, default=30)
@@ -104,6 +106,8 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     args = ap.parse_args(argv)
     if args.estetica not in montaje.ESTETICAS and not Path(args.estetica).is_file():
         ap.error(f"--estetica: «{args.estetica}» no es {' ni '.join(montaje.ESTETICAS)} ni un .html que exista")
+    if args.musica not in musica.ESTILOS and not Path(args.musica).is_file():
+        ap.error(f"--musica: «{args.musica}» no es {', '.join(musica.ESTILOS)} ni un fichero que exista")
     return args
 
 
@@ -241,11 +245,13 @@ def _ejecutar(args: argparse.Namespace) -> int:
             return 0
 
         audio = None
-        if args.musica:
+        if args.sin_musica:
+            pass
+        elif args.musica not in musica.ESTILOS:
             audio = Path(args.musica).resolve()
-        elif not args.sin_musica:
-            from . import musica
-            audio = musica.generar(trabajo / "musica.wav", duracion / 1000, [h["inicio"] / 1000 for h in video["hitos"][1:]])
+        else:
+            audio = musica.generar(trabajo / "musica.wav", duracion / 1000, [h["inicio"] / 1000 for h in video["hitos"][1:]],
+                                   args.musica)
         print(f"  {len(video['hitos'])} escenas, {duracion / 1000:.0f} s de vídeo")
         montaje.renderizar(navegador, trabajo / "video", salida, args.fps, audio, ffmpeg)
         navegador.close()
