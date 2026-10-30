@@ -91,7 +91,7 @@ Además de un rótulo por escena (`rotulos`), admite:
 {
  "sitio": "~/mi-sb/storybook-static",
  "pasos": [
-  {"story": "inicio--guia", "segundos": 5, "rotulo": "La guía", "acciones": [{"leer": true}]},
+  {"story": "intro--bienvenida", "segundos": 5, "rotulo": "La portada", "acciones": [{"leer": true}]},
   {"story": "button--primary", "segundos": 6, "acciones": [{"global": "Dark"}, {"clic": "button"}, {"usar": 1}]}
  ]
 }

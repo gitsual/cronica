@@ -420,7 +420,7 @@ def _abrir_story(cam: Camara, base: str, story: str, panel: str | None) -> None:
 
 def _accion(cam: Camara, a: dict, conmutadores: list[dict]) -> None:
     page = cam.page
-    if "global" in a:   # una opción de la barra de Storybook, por su título («Retro», «Dark»…)
+    if "global" in a:   # una opción de la barra de Storybook, por su título («Dark», «Compacto»…)
         for c in conmutadores:
             o = next((o for o in c["opciones"] if o["titulo"] == a["global"]), None)
             if o:
