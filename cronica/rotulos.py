@@ -11,6 +11,7 @@ import re
 import urllib.request
 
 from .historia import Commit
+from .i18n import _
 
 LARGO = 64
 CLAVE = re.compile(r"\b[A-Z][A-Z0-9]{1,9}-\d+\b")
@@ -64,7 +65,7 @@ def limpiar(titulo: str) -> str:
 
 
 def chip(c: Commit) -> str:
-    pr, _ = pr_y_titulo(c)
+    pr, _titulo = pr_y_titulo(c)
     partes = [f"#{pr}"] if pr else []
     k = clave(c)
     if k:
@@ -96,41 +97,44 @@ def _modelo_ollama(base: str) -> str:
     with urllib.request.urlopen(base + "/api/tags", timeout=5) as r:
         modelos = [m["name"] for m in json.loads(r.read()).get("models", [])]
     if not modelos:
-        raise RuntimeError("Ollama no tiene modelos")
+        raise RuntimeError(_("Ollama no tiene modelos"))
     preferidos = ("qwen3", "qwen2.5", "llama3", "gemma", "mistral")
     return next((m for p in preferidos for m in modelos if m.startswith(p) and "embed" not in m), modelos[0])
 
 
-def con_ia(nombre: str, hitos: list[dict], modelo: str | None, idioma: str = "es") -> dict:
+def con_ia(nombre: str, hitos: list[dict], modelo: str | None, idioma: str = "en") -> dict:
     """{'titulo', 'cierre', 'rotulos': {nn: texto}} escrito por el modelo; lanza si no responde bien."""
     bloques = []
     for h in hitos:
         nuevos = ", ".join(h["nuevas"][:12]) or "—"
         commits = "\n".join(f"    - {s}" for s in h["commits"][:25])
-        bloques.append(f"[{h['nn']}] {h['fecha']} · título original: {h['titulo']}\n  aparece: {nuevos}\n  commits:\n{commits}")
-    lengua = {"es": "español de España", "en": "English"}.get(idioma, idioma)
-    prompt = f"""Escribe los rótulos de un vídeo que enseña cómo evolucionó la interfaz del proyecto «{nombre}».
-Cada escena es un hito de su historia git. Para cada hito tienes su título original, los componentes o
-pantallas que aparecen por primera vez y los commits desde el hito anterior.
+        bloques.append(f"[{h['nn']}] {h['fecha']} · original title: {h['titulo']}\n  appears: {nuevos}\n  commits:\n{commits}")
+    lengua, ejemplos = {
+        "es": ("Spanish from Spain", "«Llega la tabla de tracks», «Modo oscuro en todas las pantallas»"),
+        "en": ("English", "«The tracks table arrives», «Dark mode on every screen»"),
+    }.get(idioma, (idioma, ""))
+    prompt = f"""Write the headlines of a film that shows how the interface of the project «{nombre}» evolved.
+Each scene is a milestone of its git history. For each milestone you have its original title, the components or
+screens that appear for the first time and the commits since the previous milestone.
 
-Reglas para cada rótulo:
-- en {lengua}, de 3 a 9 palabras y como mucho 55 caracteres;
-- di qué cambia en lo que se ve o en lo que el proyecto ya sabe hacer; concreto, sin adjetivos de marketing;
-- sin claves de ticket, números de PR, hashes ni prefijos tipo «feat:»;
-- en frase nominal o en presente («Llega la tabla de tracks», «Modo oscuro en todas las pantallas»).
+Rules for each headline:
+- in {lengua}, 3 to 9 words and at most 55 characters;
+- say what changes in what you see or in what the project can now do; concrete, no marketing adjectives;
+- no ticket keys, PR numbers, hashes or prefixes like «feat:»;
+- as a noun phrase or in the present tense ({ejemplos}).
 
-Escribe también "titulo" (el nombre del proyecto o una frase de 2 a 5 palabras) y "cierre" (una frase corta
-que resuma el recorrido, sin cifras).
+Also write "titulo" (the project's name or a phrase of 2 to 5 words) and "cierre" (a short sentence that sums up
+the journey, without figures), both in {lengua}.
 
-Responde SOLO con JSON: {{"titulo": "...", "cierre": "...", "rotulos": {{"<nn>": "..."}}}}
+Answer ONLY with JSON: {{"titulo": "...", "cierre": "...", "rotulos": {{"<nn>": "..."}}}}
 
-HITOS
+MILESTONES
 {chr(10).join(bloques)}"""
     texto = _llm(prompt, modelo)
     m = re.search(r"\{.*\}", texto, re.S)
     datos = json.loads(m.group(0) if m else texto)
     rot = {str(k): str(v).strip() for k, v in (datos.get("rotulos") or {}).items() if str(v).strip()}
     if len(rot) < len(hitos) // 2:
-        raise RuntimeError("el modelo devolvió pocos rótulos")
+        raise RuntimeError(_("el modelo devolvió pocos rótulos"))
     return {"titulo": str(datos.get("titulo") or nombre)[:60], "cierre": str(datos.get("cierre") or "")[:90],
             "rotulos": {k: (v if len(v) <= LARGO + 6 else limpiar(v)) for k, v in rot.items()}}

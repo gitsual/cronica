@@ -159,7 +159,7 @@
   <div id="tl"><div class="fill"></div><div class="ext"></div><div class="fechas"><span id="tl-a"></span><span id="tl-b"></span></div></div>
   <div class="card" id="intro"><div id="introbg"></div><div class="perf izq"></div><div class="perf der"></div>
     <div class="cuerpo">
-      <div class="ante"><span class="g">Crónica</span><i></i><span>Noticiario del proyecto</span></div>
+      <div class="ante"><span class="g">Crónica</span><i></i><span id="noticiario"></span></div>
       <h1 id="introh"></h1><div class="raya"></div><p id="introsub"></p><div class="sub" id="introdatos"></div>
     </div></div>
   <div class="card" id="acto"><div class="perf izq"></div><div class="perf der"></div>
@@ -172,41 +172,18 @@
       <div class="ante" id="outroante"></div>
       <h1 id="outroh"></h1><div class="raya"></div><div class="big" id="outrobig"></div><p id="outrosub"></p><p class="peq" id="outropie"></p>
     </div>
-    <div id="fin"><i></i><span>Fin</span><i></i></div></div>
+    <div id="fin"><i></i><span id="fint"></span><i></i></div></div>
 </div>
 <script>
 const TRANS = 380
-const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
-const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const $ = id => document.getElementById(id)
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x))
 const ease = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
 const lerp = (a, b, k) => a + (b - a) * k
-const fecha = f => { const [y, m, d] = f.split('-'); return `${Number(d)} ${MESES[m - 1]} ${y}` }
-/** «Miércoles, 28 de octubre de 2026», la fecha de la cabecera. */
-const fechaLarga = f => {
-  const [y, m, d] = f.split('-').map(Number), dia = DIAS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
-  return `${dia}, ${d} de ${MESES_L[m - 1]} de ${y}`
-}
-/** «Del 24 de septiembre al 28 de octubre de 2026». */
-const rangoLargo = (a, b) => {
-  const [ya, ma, da] = a.split('-').map(Number), [yb, mb, db] = b.split('-').map(Number)
-  const ini = `${da} de ${MESES_L[ma - 1]}` + (ya !== yb ? ` de ${ya}` : '')
-  return a === b ? `El ${db} de ${MESES_L[mb - 1]} de ${yb}` : `Del ${ini} al ${db} de ${MESES_L[mb - 1]} de ${yb}`
-}
-const num = n => Math.round(n).toLocaleString('es-ES')
+/** Una palabra del vídeo en el idioma de datos.json, con sus huecos ({i}, {n}…) rellenos. */
+const tr = (k, v = {}) => (D.t?.[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => v[x] ?? '')
+const num = n => Math.round(n).toLocaleString(D?.locale || 'es-ES')
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-/** «Tres semanas», «Un mes», «2 años»… entre dos fechas AAAA-MM-DD. */
-function lapso (a, b) {
-  const dias = Math.max(1, Math.round((new Date(b) - new Date(a)) / 864e5))
-  const pal = ['', 'Un', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez', 'Once', 'Doce']
-  const di = (n, s, p, fem) => (n <= 12 ? (n === 1 && fem ? 'Una' : pal[n]) : String(n)) + ' ' + (n === 1 ? s : p)
-  if (dias < 14) return di(dias, 'día', 'días')
-  if (dias < 60) return di(Math.round(dias / 7), 'semana', 'semanas', true)
-  if (dias < 730) return di(Math.round(dias / 30.4), 'mes', 'meses')
-  return di(Math.round(dias / 365), 'año', 'años')
-}
 /** Reduce la letra hasta que el texto quepa en `ancho`. */
 function encajar (el, ancho) {
   el.style.fontSize = ''
@@ -247,31 +224,32 @@ async function load () {
   }
   const tl = $('tl').querySelector('.ext')
   H.forEach(h => { const d = document.createElement('div'); d.className = 'dot'; d.style.left = `${(h.inicio + h.dur) / FIN * 100}%`; tl.appendChild(d) })
-  $('lado').innerHTML = '<div class="seccion">En cifras</div>' +
+  $('noticiario').textContent = tr('Noticiario del proyecto'); $('fint').textContent = tr('Fin')
+  $('lado').innerHTML = `<div class="seccion">${tr('En cifras')}</div>` +
     CIFRAS.map(([k, l]) => `<div class="cifra"><div class="n" data-k="${k}">0</div><div class="l">${l}</div></div>`).join('') +
-    '<div class="seccion hem">Hemeroteca</div>'
+    `<div class="seccion hem">${tr('Hemeroteca')}</div>`
   // La hemeroteca empieza justo debajo de la última cifra.
   const hem = $('lado').querySelector('.hem')
   const top = 236 + hem.offsetTop + hem.offsetHeight + 14
   MOS.y = top; MOS.h = 1000 - top
   const last = H.at(-1)
-  $('mancheta').textContent = `Crónica de ${D.proyecto}`
+  $('mancheta').textContent = tr('Crónica de {p}', { p: D.proyecto })
   encajar($('mancheta'), 640)
-  $('tl-a').textContent = fecha(H[0].fecha); $('tl-b').textContent = fecha(last.fecha)
+  $('tl-a').textContent = H[0].fecha_corta; $('tl-b').textContent = last.fecha_corta
   $('introh').textContent = D.titulo
-  $('introsub').textContent = rangoLargo(H[0].fecha, last.fecha)
+  $('introsub').textContent = D.rango
   // La demo en vivo no cuenta como número del diario: es la edición en directo del final.
   const numeros = H.filter(h => !h.demo).length
-  $('introdatos').innerHTML = `<span>${numeros} ${numeros === 1 ? 'número' : 'números'}</span>` +
+  $('introdatos').innerHTML = `<span>${tr(numeros === 1 ? '{n} número' : '{n} números', { n: numeros })}</span>` +
     CIFRAS.filter(([k]) => last.cifras[k]).slice(0, 2).map(([k, l]) => `<span>${num(last.cifras[k])} ${esc(l)}</span>`).join('')
   const primera = H.find(h => h.fotogramas)
   if (primera) $('introbg').style.backgroundImage = `url(${fotograma(primera, 0)})`
-  $('outroante').innerHTML = `<span>Última edición · ${esc(fechaLarga(last.fecha).replace(/^[^,]+, /, ''))}</span>`
-  $('outroh').innerHTML = `${esc(lapso(H[0].fecha, last.fecha))} de <em>${esc(D.proyecto)}</em>`
+  $('outroante').innerHTML = `<span>${esc(tr('Última edición'))} · ${esc(D.final)}</span>`
+  $('outroh').innerHTML = esc(tr('{lapso} de {p}', { lapso: D.lapso, p: '\u0000' })).replace('\u0000', `<em>${esc(D.proyecto)}</em>`)
   $('outrosub').textContent = D.cierre || ''
   $('outropie').textContent = D.pie || ''
   const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-  H.filter(h => h.acto).forEach((h, j) => { h.acto.num = `Acto ${ROMANOS[j] ?? j + 1}` })
+  H.filter(h => h.acto).forEach((h, j) => { h.acto.num = `${tr('Acto')} ${ROMANOS[j] ?? j + 1}` })
   $('outrobig').innerHTML = CIFRAS.filter(([k]) => last.cifras[k]).map(([k, l]) => `<div><strong>${num(last.cifras[k])}</strong>${l}</div>`).join('')
   encajar($('introh'), 1320)
   window.ready = true
@@ -332,9 +310,9 @@ function seek (t) {
   $('introsub').style.opacity = ease((t - 350) / 600); $('introdatos').style.opacity = ease((t - 600) / 600)
 
   // La cabecera del número.
-  $('fecha').textContent = fechaLarga(h.fecha)
+  $('fecha').textContent = h.fecha_larga
   const numeros = H.filter(x => !x.demo).length
-  $('chip').textContent = h.demo ? 'Edición en directo' : `Núm. ${i + 1} de ${numeros}` + (h.sha ? ` · ${h.sha}` : '')
+  $('chip').textContent = h.demo ? tr('Edición en directo') : tr('Núm. {i} de {n}', { i: i + 1, n: numeros }) + (h.sha ? ` · ${h.sha}` : '')
   const r = $('rotulo'); if (r.dataset.nn !== h.nn) { r.dataset.nn = h.nn; r.textContent = h.rotulo; encajar(r, 1060) }
   const nota = $('nota').firstChild
   if (nota.dataset.nn !== h.nn) { nota.dataset.nn = h.nn; nota.textContent = h.nota || '' }
@@ -343,15 +321,15 @@ function seek (t) {
   nota.style.opacity = ease((local - 400) / 500)
 
   // El golpe de sello: entra grande y cae sobre el papel.
-  const [d, m, y] = fecha(h.fecha).split(' ')
+  const [d, m, y] = h.fecha_corta.split(' ')
   $('sello-dia').textContent = `${d} ${m}`; $('sello-ano').textContent = y
-  $('sello-num').textContent = h.demo ? 'EN DIRECTO' : `NÚM. ${i + 1}` + (h.sha ? ` · ${h.sha}` : '')
+  $('sello-num').textContent = h.demo ? tr('EN DIRECTO') : tr('NÚM. {i}', { i: i + 1 }) + (h.sha ? ` · ${h.sha}` : '')
   const ks = clamp((local - 250) / 220), sello = $('sello')
   sello.style.opacity = ks * (1 - ease(outroT / 600))
   sello.style.transform = `rotate(${giro(i)}deg) scale(${lerp(1.6, 1, ease(ks))})`
 
   // El clip de la escena, con un fundido corto desde el último fotograma de la anterior.
-  $('url').textContent = `Foto · ${h.barra || D.barra}`
+  $('url').textContent = `${tr('Foto')} · ${h.barra || D.barra}`
   const ext = $('ext'), esExt = h.tipo === 'extraccion', deExt = prev && prev.tipo === 'extraccion'
   if (esExt) {
     extraccion(h, local)
@@ -372,7 +350,7 @@ function seek (t) {
   // El antetítulo: lo que entra nuevo o lo que cambia.
   const ante = $('antetitulo'), nuevo = h.nuevas.length > 0, lista = nuevo ? h.nuevas : h.cambiadas
   ante.className = nuevo ? '' : 'cambia'
-  ante.querySelector('b').textContent = nuevo ? 'Nuevo' : 'Cambia'
+  ante.querySelector('b').textContent = tr(nuevo ? 'Nuevo' : 'Cambia')
   ante.querySelector('em').textContent = lista.slice(0, 4).join(' · ') + (lista.length > 4 ? ` +${lista.length - 4}` : '')
   ante.style.display = lista.length && i > 0 && !esExt ? 'flex' : 'none'
   ante.style.opacity = ease((local - 150) / 400) * (1 - out)
@@ -442,10 +420,10 @@ function extraccion (h, t) {
     const carpetas = h.carpetas.map(([c, n]) => `<li data-c="${esc(c)}"><span>${esc(c)}/</span><span>${n}</span></li>`).join('')
     const lineas = !(D.ocultar || []).includes('lineas')
     ext.innerHTML = `
-      <div class="repo" style="left:60px"><h3>${esc(h.de)}</h3><div class="n">${num(lineas ? h.lineas_a : h.ficheros_a)}</div><div class="l">${lineas ? 'líneas' : 'ficheros'}</div>
+      <div class="repo" style="left:60px"><h3>${esc(h.de)}</h3><div class="n">${num(lineas ? h.lineas_a : h.ficheros_a)}</div><div class="l">${tr(lineas ? 'líneas' : 'ficheros')}</div>
         <ul>${carpetas}</ul></div>
       <div class="flecha"></div>
-      <div class="repo" style="left:800px"><h3>${esc(h.a)}</h3><div class="n" id="extn">0</div><div class="l">${lineas ? 'líneas al llegar' : 'ficheros al llegar'}</div>
+      <div class="repo" style="left:800px"><h3>${esc(h.a)}</h3><div class="n" id="extn">0</div><div class="l">${tr(lineas ? 'líneas al llegar' : 'ficheros al llegar')}</div>
         <ul id="extl"></ul></div>
       <div class="pie"></div><div class="dato"></div>` + h.muestra.map((m, j) => `<div class="vuela" data-j="${j}">${esc(m.split('/').slice(-2).join('/'))}</div>`).join('')
     EXT[h.nn] = { vuelos: [...ext.querySelectorAll('.vuela')], llegados: [] }
@@ -468,12 +446,12 @@ function extraccion (h, t) {
   $('extn').textContent = num((lineas ? h.lineas_b : h.ficheros_b) * ease(kl))
   $('extl').innerHTML = h.muestra.slice(0, llegados).slice(-9).map(m => `<li class="va"><span>${esc(m.split('/').pop())}</span></li>`).join('')
   ext.querySelector('.pie').innerHTML = t > fin - 300
-    ? `<b>${h.ficheros}</b> de los ${h.ficheros_b} ficheros llegan idénticos` + (lineas ? ` · <b>${num(h.lineas_mudan)}</b> líneas que ya existían` : '')
-    : (n => `${num(n)} fichero${n === 1 ? "" : "s"}…`)(Math.round(h.ficheros * kl))
+    ? tr('{a} de los {b} ficheros llegan idénticos', { a: `<b>${h.ficheros}</b>`, b: h.ficheros_b }) + (lineas ? ' · ' + tr('{n} líneas que ya existían', { n: `<b>${num(h.lineas_mudan)}</b>` }) : '')
+    : (n => tr(n === 1 ? '{n} fichero…' : '{n} ficheros…', { n: num(n) }))(Math.round(h.ficheros * kl))
   ext.querySelector('.pie').style.opacity = ease((t - ini) / 500)
   // Sin líneas en el resto del vídeo, aquí quedan como un dato pequeño: cuánto se muda.
   const dato = ext.querySelector('.dato')
-  dato.textContent = !lineas && h.lineas_mudan ? `${num(h.lineas_mudan)} líneas extraídas` : ''
+  dato.textContent = !lineas && h.lineas_mudan ? tr('{n} líneas extraídas', { n: num(h.lineas_mudan) }) : ''
   dato.style.opacity = ease((t - fin) / 500)
 }
 

@@ -49,7 +49,7 @@ def test_de_la_carpeta_al_video(repo, tmp_path, monkeypatch):
 
     # Los rótulos se pueden editar y el segundo pase sale entero de la caché.
     rot = json.loads((trabajo / "rotulos.json").read_text(encoding="utf-8"))
-    rot["rotulos"][datos["hitos"][2]["sha"]] = "Llegan los precios"
+    rot["headlines"][datos["hitos"][2]["sha"]] = "Llegan los precios"
     (trabajo / "rotulos.json").write_text(json.dumps(rot), encoding="utf-8")
     assert main([str(repo.raiz), "-o", str(salida), "--segundos", "2", "--fps", "6", "--sin-musica", "--previa"]) == 0
     datos = json.loads((trabajo / "video" / "datos.json").read_text(encoding="utf-8"))
@@ -61,7 +61,7 @@ def test_sin_interfaz(repo, tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("CRONICA_CACHE", str(tmp_path / "cache"))
     repo.commit("lib", {"lib.py": "x = 1\n"})
     assert main([str(repo.raiz)]) == 3
-    assert "solo hace vídeos de proyectos con interfaz" in capsys.readouterr().out
+    assert "only films projects with an interface" in capsys.readouterr().out
 
 
 def test_no_es_repo(tmp_path, monkeypatch):
@@ -91,7 +91,7 @@ def test_extraccion_a_otro_repositorio(tmp_path, monkeypatch):
     assert tipos == ["hito", "hito", "extraccion", "hito", "hito"]
     ext = datos["hitos"][2]
     assert (ext["de"], ext["a"], ext["ficheros"], ext["ficheros_b"]) == ("viejo", "nuevo", 2, 2)
-    assert ext["rotulo"] == "Extracción: la interfaz se muda a nuevo"
+    assert ext["rotulo"] == "Extraction: the interface moves to nuevo"
     # El primer hito del nuevo no cambia nada a la vista, pero sale: es el resultado de la mudanza.
     assert datos["hitos"][3]["fotogramas"] > 0 and datos["hitos"][3]["barra"].endswith("nuevo")
     assert len(list((trabajo / "previa").glob("*.png"))) == 7
