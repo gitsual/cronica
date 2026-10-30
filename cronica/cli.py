@@ -90,6 +90,10 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
                     help="un repositorio que no sale en pantalla pero cuenta en las cifras (carpeta o carpeta@rama)")
     ap.add_argument("--paseo", nargs="?", type=float, const=60.0, metavar="SEGUNDOS",
                     help="al final, un paseo por todos los componentes cambiando los temas de la barra (60 s)")
+    ap.add_argument("--demo", metavar="FICHERO.json",
+                    help="al final, una demo guiada de Storybook: paradas, acciones y segundos de cada una")
+    ap.add_argument("--nombre", action="append", default=[], metavar="CARPETA=NOMBRE",
+                    help="el nombre con el que sale un repositorio en el vídeo (p. ej. si se ha renombrado)")
     ap.add_argument("--ocultar", action="append", default=[], metavar="CIFRA",
                     choices=("componentes", "pantallas", "stories", "ficheros", "lineas", "commits", "autores"),
                     help="una cifra que no sale en el vídeo (se puede repetir): p. ej. --ocultar lineas")
@@ -134,10 +138,11 @@ class Capitulo:
     todos: list[historia.Commit]
     tipo: str
     hechos: list[tuple[historia.Commit, dict]]
+    alias: str = ""
 
     @property
     def nombre(self) -> str:
-        return self.repo.name
+        return self.alias or self.repo.name
 
 
 def _trabajo_de(repo: Path) -> Path:
@@ -197,6 +202,7 @@ def _ejecutar(args: argparse.Namespace) -> int:
             cap = _capitulo(repo, rama or args.rama, args, navegador, previas, propio, primero_forzado=k > 0)
             if isinstance(cap, int):
                 return cap
+            cap.alias = dict(n.partition("=")[::2] for n in args.nombre).get(repo.name, "")
             capitulos.append(cap)
 
         if sum(len(c.hechos) for c in capitulos) < 2:
@@ -218,6 +224,10 @@ def _ejecutar(args: argparse.Namespace) -> int:
                            ecosistema if len(ecosistema) > 1 else None)
             if paseo:
                 escenas.append(paseo)
+        if args.demo:
+            ecosistema = [(c.repo, c.rama) for c in capitulos] + acompanantes
+            escenas += _demo(capitulos[-1], trabajo, navegador, args, len(escenas) + 1,
+                             ecosistema if len(ecosistema) > 1 else None)
         textos = _textos(trabajo, [c.trabajo for c in capitulos], nombre, escenas, args)
         tipo = capitulos[0].tipo
         video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos, tuple(args.ocultar), args.estetica)
@@ -375,6 +385,38 @@ def _paseo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n:
             "barra": f"storybook · {cap.nombre}", "commits": [], "paseo": True}
 
 
+def _demo(cap: Capitulo, trabajo: Path, navegador, args: argparse.Namespace, n: int,
+          ecosistema: list[tuple[Path, str]] | None = None) -> list[dict]:
+    """--demo: una escena por parada, grabada sobre el último build (o sobre el «sitio» del fichero, p. ej. un
+    build con código que aún no está en la rama). Cada parada lleva su rótulo; se editan en rotulos.json
+    («demo:1», «demo:2»…)."""
+    guion = json.loads(Path(args.demo).read_text(encoding="utf-8"))
+    if cap.tipo != "storybook" or not cap.hechos:
+        return []
+    h, estado = cap.hechos[-1]
+    sitio = Path(guion["sitio"]).expanduser() if guion.get("sitio") else cap.trabajo / "hitos" / h.sha[:12] / "sitio"
+    if not sitio.is_dir():
+        print(f"  --demo: no encuentro el build «{sitio}»")
+        return []
+    pasos = guion["pasos"]
+    carpetas = [trabajo / "demo" / f"{k:02d}" for k in range(1, len(pasos) + 1)]
+    print(f"\n  demo de {len(pasos)} paradas…", end=" ", flush=True)
+    with Servidor(sitio) as s:
+        fotogramas = recorrido.demo(navegador, s.url, pasos, [c / "clip" for c in carpetas])
+    print(f"{sum(fotogramas) / montaje.FPS_CLIP:.0f} s")
+    fecha = guion.get("fecha") or cap.todos[-1].fecha
+    cifras = (historia.cifras_ecosistema(ecosistema, fecha) if ecosistema
+              else historia.cifras_git(cap.repo, cap.todos[-1].sha))
+    escenas = []
+    for k, (paso, carpeta, total) in enumerate(zip(pasos, carpetas, fotogramas), 1):
+        escenas.append({"nn": f"{n + k - 1:02d}", "sha": h.sha, "fecha": paso.get("fecha", fecha), "dir_clip": str(carpeta),
+                        "chip": paso.get("chip", cap.nombre), "titulo": paso.get("rotulo", paso["story"]),
+                        "cifras": cifras, "fotos": {**estado["fotos"], "fotogramas": total, "nuevas": [], "cambiadas": []},
+                        "dir": str(cap.trabajo), "cap": len(args.carpetas) - 1,
+                        "barra": f"storybook · {cap.nombre}", "commits": [], "demo": k})
+    return escenas
+
+
 def _resumen(estado: dict) -> str:
     if not estado["ok"]:
         return f"salta: {estado['motivo']} (log: {estado['log']})"
@@ -413,6 +455,8 @@ def _clave(escena: dict) -> str:
         return f"extraccion:{escena['de']}>{escena['a']}"
     if escena.get("paseo"):
         return "paseo"
+    if escena.get("demo"):
+        return f"demo:{escena['demo']}"
     return escena["sha"][:7]
 
 
@@ -451,7 +495,13 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
     for e in escenas:
         por_clave.setdefault(_clave(e), e["titulo"])
     # «notas»: una línea opcional por escena, el porqué del cambio, como subtítulo (mismas claves que «rotulos»).
-    fichero.write_text(json.dumps({"titulo": titulo, "cierre": cierre, "rotulos": por_clave, "notas": notas}, indent=1,
-                                  ensure_ascii=False), encoding="utf-8")
-    return {"titulo": titulo, "cierre": cierre, "rotulos": {e["nn"]: por_clave[_clave(e)] for e in escenas},
-            "notas": {e["nn"]: notas[_clave(e)] for e in escenas if notas.get(_clave(e))}}
+    # «actos»: [{desde: clave, titulo, frase}]: un cartel que abre cada parte del vídeo, antes de esa escena.
+    # «pie»: una línea pequeña bajo el cierre.
+    actos, pie = guardado.get("actos", []), guardado.get("pie", "")
+    fichero.write_text(json.dumps({"titulo": titulo, "cierre": cierre, "pie": pie, "rotulos": por_clave, "notas": notas,
+                                   "actos": actos}, indent=1, ensure_ascii=False), encoding="utf-8")
+    por_nn = {_clave(e): e["nn"] for e in escenas}
+    return {"titulo": titulo, "cierre": cierre, "pie": pie, "rotulos": {e["nn"]: por_clave[_clave(e)] for e in escenas},
+            "notas": {e["nn"]: notas[_clave(e)] for e in escenas if notas.get(_clave(e))},
+            "actos": {por_nn[a["desde"]]: {"titulo": a.get("titulo", ""), "frase": a.get("frase", "")}
+                      for a in actos if a.get("desde") in por_nn}}

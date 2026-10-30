@@ -383,6 +383,115 @@ def _cambiar(cam: Camara, c: dict, valor: dict) -> bool:
     return True
 
 
+# ---------------------------------------------------------------- demo guiada
+
+def _abrir_story(cam: Camara, base: str, story: str, panel: str | None) -> None:
+    """Va a la story desde la barra lateral si está a la vista; si no (o si hace falta el panel), por la URL."""
+    page = cam.page
+    enlace = None if panel else page.query_selector(f"[data-item-id='{story}']")
+    b = _caja(enlace) if enlace else None
+    if b:
+        cam.mover(*_centro(b), fotos=10)
+        cam.clic()
+    else:
+        # Los globals que ya se han cambiado (tema, diseño…) siguen puestos: van en la URL.
+        globales = page.evaluate("() => new URL(location.href).searchParams.get('globals') || ''")
+        page.goto(f"{base}/index.html?path=/story/{story}" + (f"&globals={globales}" if globales else "") +
+                  ("" if panel else "&panel=false"))
+        try:
+            page.wait_for_selector("#storybook-preview-iframe", timeout=20_000)
+        except Exception:
+            pass
+    _esperar_story(page)
+    if panel:
+        mostrar = page.query_selector("button[aria-label='Show addon panel'], button[title='Show addon panel']")
+        mb = _caja(mostrar) if mostrar else None
+        if mb:
+            cam.mover(*_centro(mb))
+            cam.clic()
+            page.wait_for_timeout(500)
+        pestana = page.query_selector(f"button:has-text('{panel}'), [role=tab]:has-text('{panel}')")
+        pb = _caja(pestana) if pestana else None
+        if pb:
+            cam.mover(*_centro(pb))
+            cam.clic()
+            page.wait_for_timeout(600)
+
+
+def _accion(cam: Camara, a: dict, conmutadores: list[dict]) -> None:
+    page = cam.page
+    if "global" in a:   # una opción de la barra de Storybook, por su título («Retro», «Dark»…)
+        for c in conmutadores:
+            o = next((o for o in c["opciones"] if o["titulo"] == a["global"]), None)
+            if o:
+                _cambiar(cam, c, o)
+                return
+    elif "clic" in a:   # un selector de Playwright, en la story (por defecto) o en el Storybook («en»: «barra»)
+        contexto = page if a.get("en") == "barra" else _iframe(page)
+        h = None
+        try:
+            h = contexto.wait_for_selector(a["clic"], state="visible", timeout=4_000) if contexto else None
+        except Exception:
+            pass
+        b = _caja(h) if h else None
+        if b:
+            cam.mover(*_centro(b))
+            cam.deriva(3)
+            cam.clic()
+            page.wait_for_timeout(a.get("espera", 300))
+            cam.deriva(a.get("deriva", 8))
+    elif "usar" in a:
+        f = _iframe(page)
+        if f:
+            _usar(cam, f, a["usar"])
+    elif "leer" in a:
+        marco = page.query_selector("#storybook-preview-iframe")
+        zona = _caja(marco) if marco else None
+        if zona:
+            _recorrer_texto(cam, zona)
+    elif "rueda" in a:
+        cam.rueda(a["rueda"], a.get("fotos", 24))
+    elif "deriva" in a:
+        cam.deriva(a["deriva"])
+
+
+def demo(navegador, base: str, pasos: list[dict], carpetas: list[Path]) -> list[int]:
+    """Una demo guiada: cada paso abre una story, hace sus acciones (cambiar un global de la barra, pulsar algo
+    de la story o del Storybook, usar los controles, leer) y se graba en su carpeta, con sus segundos justos.
+    Los globals que se cambian siguen cambiados en los pasos siguientes, como al usarlo de verdad."""
+    ctx = navegador.new_context(viewport={"width": ANCHO, "height": ALTO})
+    ctx.add_init_script(CURSOR)
+    ctx.grant_permissions(["clipboard-read", "clipboard-write"])
+    page = ctx.new_page()
+    page.goto(f"{base}/index.html?path=/story/{pasos[0]['story']}&panel=false")
+    try:
+        page.wait_for_selector("#storybook-preview-iframe", timeout=20_000)
+    except Exception:
+        pass
+    _esperar_story(page)
+    conmutadores = _conmutadores(page)
+    hechos, x, y = [], ANCHO * 0.55, ALTO * 0.5
+    try:
+        for k, (paso, carpeta) in enumerate(zip(pasos, carpetas)):
+            maximo = int(paso.get("segundos", 6) * FPS)
+            cam = Camara(page, carpeta, maximo)
+            cam.x, cam.y = x, y
+            try:
+                if k or paso.get("panel"):
+                    _abrir_story(cam, base, paso["story"], paso.get("panel"))
+                for a in paso.get("acciones", []):
+                    _accion(cam, a, conmutadores)
+                while True:   # lo que sobre, con el cursor en marcha: cada paso dura lo que pide
+                    cam.deriva(10)
+            except Lleno:
+                pass
+            hechos.append(cam.n)
+            x, y = cam.x, cam.y
+    finally:
+        ctx.close()
+    return hechos
+
+
 def paseo(navegador, base: str, componentes: list[dict], carpeta: Path, maximo: int) -> int:
     """Recorre todos los componentes desde la barra lateral y, cada pocos, cambia un tema de la barra de Storybook
     (claro/oscuro, y cualquier otro global con menú: diseño, densidad…), para enseñarlo todo en todas sus formas."""

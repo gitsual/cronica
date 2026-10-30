@@ -116,6 +116,13 @@
   #fin { position: absolute; left: 0; right: 0; bottom: 64px; display: flex; justify-content: center; align-items: center; gap: 36px; }
   #fin i { width: 240px; height: 1px; background: var(--gastada); }
   #fin span { font: 72px/1 var(--gotica); }
+  #outro p.peq { margin-top: 14px; font-size: 26px; color: var(--papel-sala); }
+  /* El cartel de un acto: abre cada parte del vídeo en la sala, con su número, su título y una frase. */
+  #acto { opacity: 0; }
+  #acto h1 { font-size: 150px; white-space: nowrap; }
+  #acto p.frase { margin-top: 30px; font-size: 46px; max-width: 1320px; }
+  #ext .dato { position: absolute; left: 0; right: 0; top: 660px; text-align: center; font: 500 15px var(--mono);
+    letter-spacing: .14em; text-transform: uppercase; color: var(--gastada); }
 </style>
 </head>
 <body>
@@ -155,10 +162,15 @@
       <div class="ante"><span class="g">Crónica</span><i></i><span>Noticiario del proyecto</span></div>
       <h1 id="introh"></h1><div class="raya"></div><p id="introsub"></p><div class="sub" id="introdatos"></div>
     </div></div>
+  <div class="card" id="acto"><div class="perf izq"></div><div class="perf der"></div>
+    <div class="cuerpo">
+      <div class="ante"><span class="g">Crónica</span><i></i><span id="acton"></span></div>
+      <h1 id="actoh"></h1><div class="raya"></div><p class="frase" id="actof"></p>
+    </div></div>
   <div class="card" id="outro"><div class="perf izq"></div><div class="perf der"></div>
     <div class="cuerpo">
       <div class="ante" id="outroante"></div>
-      <h1 id="outroh"></h1><div class="raya"></div><div class="big" id="outrobig"></div><p id="outrosub"></p>
+      <h1 id="outroh"></h1><div class="raya"></div><div class="big" id="outrobig"></div><p id="outrosub"></p><p class="peq" id="outropie"></p>
     </div>
     <div id="fin"><i></i><span>Fin</span><i></i></div></div>
 </div>
@@ -222,7 +234,7 @@ async function load () {
   const fichas = new Set(H.flatMap(h => h.fichas.flatMap(t => [t.light, t.dark].filter(Boolean))))
   await Promise.all([...fichas].map(src => new Promise(ok => { const im = new Image(); im.onload = im.onerror = ok; im.src = src })))
   // Las letras se cargan al usarse: se piden antes de medir nada.
-  await Promise.all(['800 64px Newsreader', 'italic 600 25px Newsreader', '54px UnifrakturMaguntia', '18px "IBM Plex Mono"']
+  await Promise.all(['800 64px Newsreader', '800 150px Newsreader', 'italic 600 25px Newsreader', '54px UnifrakturMaguntia', '18px "IBM Plex Mono"']
     .map(f => document.fonts.load(f).catch(() => {})))
   const mosaic = $('mosaic')
   for (const key of ORDER) {
@@ -248,13 +260,18 @@ async function load () {
   $('tl-a').textContent = fecha(H[0].fecha); $('tl-b').textContent = fecha(last.fecha)
   $('introh').textContent = D.titulo
   $('introsub').textContent = rangoLargo(H[0].fecha, last.fecha)
-  $('introdatos').innerHTML = `<span>${H.length} ${H.length === 1 ? 'número' : 'números'}</span>` +
+  // La demo en vivo no cuenta como número del diario: es la edición en directo del final.
+  const numeros = H.filter(h => !h.demo).length
+  $('introdatos').innerHTML = `<span>${numeros} ${numeros === 1 ? 'número' : 'números'}</span>` +
     CIFRAS.filter(([k]) => last.cifras[k]).slice(0, 2).map(([k, l]) => `<span>${num(last.cifras[k])} ${esc(l)}</span>`).join('')
   const primera = H.find(h => h.fotogramas)
   if (primera) $('introbg').style.backgroundImage = `url(${fotograma(primera, 0)})`
   $('outroante').innerHTML = `<span>Última edición · ${esc(fechaLarga(last.fecha).replace(/^[^,]+, /, ''))}</span>`
   $('outroh').innerHTML = `${esc(lapso(H[0].fecha, last.fecha))} de <em>${esc(D.proyecto)}</em>`
   $('outrosub').textContent = D.cierre || ''
+  $('outropie').textContent = D.pie || ''
+  const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+  H.filter(h => h.acto).forEach((h, j) => { h.acto.num = `Acto ${ROMANOS[j] ?? j + 1}` })
   $('outrobig').innerHTML = CIFRAS.filter(([k]) => last.cifras[k]).map(([k, l]) => `<div><strong>${num(last.cifras[k])}</strong>${l}</div>`).join('')
   encajar($('introh'), 1320)
   window.ready = true
@@ -288,10 +305,24 @@ function seek (t) {
   let i = H.findIndex(h => t < h.inicio + h.dur)
   if (i < 0) i = N - 1
   const h = H[i], prev = H[i - 1]
-  const local = Math.max(0, t - h.inicio)
+  // Con cartel de acto, la escena arranca cuando el cartel se va: hasta entonces se queda en su instante 0.
+  const pre = h.pre || 0, enActo = t - h.inicio
+  const local = Math.max(0, enActo - pre)
   const k = ease(local / TRANS)
   const out = ease(outroT / 1100)
   const espera = []
+
+  const acto = $('acto')
+  if (h.acto && enActo < pre) {
+    if (acto.dataset.nn !== h.nn) {
+      acto.dataset.nn = h.nn
+      $('acton').textContent = h.acto.num; $('actoh').textContent = h.acto.titulo; $('actof').textContent = h.acto.frase
+      encajar($('actoh'), 1320)
+    }
+    acto.style.opacity = ease(enActo / 450) * clamp((pre - enActo) / 450)
+    $('actoh').style.transform = `translateY(${lerp(30, 0, ease(enActo / 700))}px)`
+    $('actof').style.opacity = ease((enActo - 500) / 600)
+  } else acto.style.opacity = 0
 
   // Entrada: el noticiario sobre el primer fotograma, que se acerca despacio.
   $('intro').style.opacity = clamp(1 - (t - D.intro + 500) / 500)
@@ -302,7 +333,8 @@ function seek (t) {
 
   // La cabecera del número.
   $('fecha').textContent = fechaLarga(h.fecha)
-  $('chip').textContent = `Núm. ${i + 1} de ${N}` + (h.sha ? ` · ${h.sha}` : '')
+  const numeros = H.filter(x => !x.demo).length
+  $('chip').textContent = h.demo ? 'Edición en directo' : `Núm. ${i + 1} de ${numeros}` + (h.sha ? ` · ${h.sha}` : '')
   const r = $('rotulo'); if (r.dataset.nn !== h.nn) { r.dataset.nn = h.nn; r.textContent = h.rotulo; encajar(r, 1060) }
   const nota = $('nota').firstChild
   if (nota.dataset.nn !== h.nn) { nota.dataset.nn = h.nn; nota.textContent = h.nota || '' }
@@ -313,7 +345,7 @@ function seek (t) {
   // El golpe de sello: entra grande y cae sobre el papel.
   const [d, m, y] = fecha(h.fecha).split(' ')
   $('sello-dia').textContent = `${d} ${m}`; $('sello-ano').textContent = y
-  $('sello-num').textContent = `NÚM. ${i + 1}` + (h.sha ? ` · ${h.sha}` : '')
+  $('sello-num').textContent = h.demo ? 'EN DIRECTO' : `NÚM. ${i + 1}` + (h.sha ? ` · ${h.sha}` : '')
   const ks = clamp((local - 250) / 220), sello = $('sello')
   sello.style.opacity = ks * (1 - ease(outroT / 600))
   sello.style.transform = `rotate(${giro(i)}deg) scale(${lerp(1.6, 1, ease(ks))})`
@@ -415,7 +447,7 @@ function extraccion (h, t) {
       <div class="flecha"></div>
       <div class="repo" style="left:800px"><h3>${esc(h.a)}</h3><div class="n" id="extn">0</div><div class="l">${lineas ? 'líneas al llegar' : 'ficheros al llegar'}</div>
         <ul id="extl"></ul></div>
-      <div class="pie"></div>` + h.muestra.map((m, j) => `<div class="vuela" data-j="${j}">${esc(m.split('/').slice(-2).join('/'))}</div>`).join('')
+      <div class="pie"></div><div class="dato"></div>` + h.muestra.map((m, j) => `<div class="vuela" data-j="${j}">${esc(m.split('/').slice(-2).join('/'))}</div>`).join('')
     EXT[h.nn] = { vuelos: [...ext.querySelectorAll('.vuela')], llegados: [] }
   }
   const e = EXT[h.nn], total = h.muestra.length, ini = 700, fin = h.dur - 1600, vuelo = 1000
@@ -439,6 +471,10 @@ function extraccion (h, t) {
     ? `<b>${h.ficheros}</b> de los ${h.ficheros_b} ficheros llegan idénticos` + (lineas ? ` · <b>${num(h.lineas_mudan)}</b> líneas que ya existían` : '')
     : (n => `${num(n)} fichero${n === 1 ? "" : "s"}…`)(Math.round(h.ficheros * kl))
   ext.querySelector('.pie').style.opacity = ease((t - ini) / 500)
+  // Sin líneas en el resto del vídeo, aquí quedan como un dato pequeño: cuánto se muda.
+  const dato = ext.querySelector('.dato')
+  dato.textContent = !lineas && h.lineas_mudan ? `${num(h.lineas_mudan)} líneas extraídas` : ''
+  dato.style.opacity = ease((t - fin) / 500)
 }
 
 window.seek = seek

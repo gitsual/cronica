@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .servidor import Servidor
 
-INTRO_MS, OUTRO_MS, EXTRACCION_MS = 2200, 5200, 7500
+INTRO_MS, OUTRO_MS, EXTRACCION_MS, ACTO_MS = 2200, 5200, 7500, 3400
 # Cómo se ve el vídeo: la primera es la de por defecto (reproductor/esteticas/<nombre>.html).
 ESTETICAS = ("diario", "clasica")
 FPS_CLIP = 30  # los clips se graban a pasos; cada fotograma vale 1/30 s
@@ -65,17 +65,26 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
         dur = round(f["fotogramas"] * 1000 / FPS_CLIP)
         salida.append({"nn": h["nn"], "sha": (h.get("sha") or "")[:7], "fecha": h["fecha"], "chip": h["chip"],
                        "rotulo": textos["rotulos"].get(h["nn"], h["titulo"]), "nota": textos.get("notas", {}).get(h["nn"], ""),
-                       "cifras": cifras, "cap": h["cap"],
+                       "cifras": cifras, "cap": h["cap"], "demo": h.get("demo", 0),
                        "barra": h["barra"],
                        "clip": f"{_rel(Path(h['dir_clip']), video)}/clip/" if h.get("dir_clip") else f"{rel}/clip/", "fotogramas": f["fotogramas"], "inicio": t, "dur": dur,
                        "nuevas": [nombres[k] for k in f.get("nuevas", []) if k in nombres],
                        "cambiadas": [nombres[k] for k in f.get("cambiadas", []) if k in nombres],
                        "fichas": fichas})
         t += dur
+    # Un acto abre con un cartel antes de su primera escena: la escena empieza ACTO_MS más tarde («pre»).
+    actos = textos.get("actos", {})
+    t = INTRO_MS
+    for e in salida:
+        if e["nn"] in actos:
+            e["acto"], e["pre"], e["dur"] = actos[e["nn"]], ACTO_MS, e["dur"] + ACTO_MS
+        e["inicio"] = t
+        t += e["dur"]
     ultimo = next((e["cifras"] for e in reversed(salida) if e["cifras"]), {})
     definicion = [[k, l] for k, l in CIFRAS[tipo] if ultimo.get(k) and k not in ocultar]
     datos = {
         "proyecto": proyecto, "titulo": textos.get("titulo") or proyecto, "cierre": textos.get("cierre") or "",
+        "pie": textos.get("pie") or "",
         "barra": f"{'storybook' if tipo == 'storybook' else 'localhost'} · {proyecto}", "cifras": definicion,
         "ocultar": list(ocultar), "fps_clip": FPS_CLIP, "intro": INTRO_MS, "outro": OUTRO_MS, "hitos": salida,
     }
