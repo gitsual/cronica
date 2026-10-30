@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import __version__, cambios, construir, detectar, historia, i18n, montaje, musica, recorrido, rotulos
+from . import __version__, ajustes, cambios, construir, detectar, historia, i18n, montaje, musica, recorrido, rotulos
 from .i18n import _
 from .servidor import Servidor
 
@@ -48,17 +48,21 @@ def _ffmpeg() -> str | None:
     return os.environ.get("CRONICA_FFMPEG") or shutil.which("ffmpeg")
 
 
+def _instalar_chromium() -> None:
+    print(_("  Falta el Chromium de Playwright; lo descargo (una sola vez, ~150 MB)…"))
+    from playwright._impl._driver import compute_driver_executable, get_driver_env
+    driver = compute_driver_executable()
+    cmd = [*driver, "install", "chromium"] if isinstance(driver, tuple) else [str(driver), "install", "chromium"]
+    subprocess.run(cmd, env=get_driver_env(), check=True)
+
+
 def _abrir_chromium(p):
     try:
         return p.chromium.launch()
     except Exception as error:
         if "Executable doesn't exist" not in str(error) and "playwright install" not in str(error):
             raise
-        print(_("  Falta el Chromium de Playwright; lo descargo (una sola vez, ~150 MB)…"))
-        from playwright._impl._driver import compute_driver_executable, get_driver_env
-        driver = compute_driver_executable()
-        cmd = [*driver, "install", "chromium"] if isinstance(driver, tuple) else [str(driver), "install", "chromium"]
-        subprocess.run(cmd, env=get_driver_env(), check=True)
+        _instalar_chromium()
         return p.chromium.launch()
 
 
@@ -82,7 +86,9 @@ def _idioma_pedido(argv: list[str]) -> str | None:
 
 def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     lista = list(sys.argv[1:] if argv is None else argv)
-    pedido = _idioma_pedido(lista)
+    # Lo que se eligió en la redacción (cronica --settings) es el valor por defecto; una opción manda sobre él.
+    conf = ajustes.leer()
+    pedido = _idioma_pedido(lista) or os.environ.get("CRONICA_LANG") or conf["lang"]
     if pedido in i18n.IDIOMAS:
         i18n.poner(pedido)
     ap = argparse.ArgumentParser(
@@ -90,21 +96,23 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("carpetas", nargs="*", metavar="folder",
                     help=_("la carpeta del proyecto (un repositorio git); si se mudó a otro repositorio, también esa, "
                            "en orden. «carpeta@rama» elige la rama de cada una"))
+    ap.add_argument("--settings", "--ajustes", dest="ajustes", action="store_true",
+                    help=_("abre la redacción: la ventana donde se eligen el idioma, el modelo de IA, la música y la estética"))
     ap.add_argument("--lang", "--idioma", dest="idioma", choices=i18n.IDIOMAS, default=i18n.idioma,
                     help=_("idioma de la consola y del vídeo: en (por defecto) o es"))
     ap.add_argument("-o", "--output", "--salida", dest="salida",
                     help=_("el mp4 (por defecto, <carpeta>-evolucion.mp4 al lado del proyecto)"))
-    ap.add_argument("-n", "--max-milestones", "--max-hitos", dest="max_hitos", type=int, default=30,
+    ap.add_argument("-n", "--max-milestones", "--max-hitos", dest="max_hitos", type=int, default=conf["max_milestones"],
                     help=_("escenas como mucho (30)"))
     ap.add_argument("--branch", "--rama", dest="rama", help=_("la rama que se recorre (por defecto, la que está activa)"))
     ap.add_argument("--mode", "--modo", dest="modo", choices=("auto", "storybook", "web", "static", "estatico"),
                     default="auto", help=_("qué se fotografía; auto = Storybook si lo hay, si no la app, si no un index.html"))
     ap.add_argument("--ai", "--ia", dest="ia", nargs="?", const="", metavar="MODEL",
-                    help=_("rótulos escritos por un modelo local (Ollama en :11434 o CRONICA_LLM=http://…/v1)"))
-    ap.add_argument("--music", "--musica", dest="musica", metavar="STYLE|FILE", default="console",
+                    help=_("rótulos escritos por un modelo (el de los ajustes; si no, Ollama en :11434 o CRONICA_LLM=http://…/v1)"))
+    ap.add_argument("--music", "--musica", dest="musica", metavar="STYLE|FILE", default=conf["music"],
                     help=_("la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio"))
     ap.add_argument("--no-music", "--sin-musica", dest="sin_musica", action="store_true", help=_("sin música"))
-    ap.add_argument("--seconds", "--segundos", dest="segundos", type=float, default=6.0,
+    ap.add_argument("--seconds", "--segundos", dest="segundos", type=float, default=conf["seconds"],
                     help=_("segundos como mucho de app en uso por hito (6)"))
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--preview", "--previa", dest="previa", action="store_true",
@@ -128,7 +136,7 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
                     help=_("el nombre con el que sale un repositorio en el vídeo (p. ej. si se ha renombrado)"))
     ap.add_argument("--hide", "--ocultar", dest="ocultar", action="append", default=[], metavar="FIGURE",
                     help=_("una cifra que no sale en el vídeo (se puede repetir): p. ej. --hide lines"))
-    ap.add_argument("--look", "--estetica", dest="estetica", default="newspaper", metavar="NAME",
+    ap.add_argument("--look", "--estetica", dest="estetica", default=conf["look"], metavar="NAME",
                     help=_("cómo se ve el vídeo: newspaper (por defecto) o classic, o la ruta de un .html propio"))
     ap.add_argument("--version", action="version", version=f"cronica {__version__}")
     args = ap.parse_args(lista)
@@ -145,7 +153,24 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
         if c not in validas:
             ap.error(_("--hide: «{e}» no es una cifra ({c})", e=c, c=", ".join(CIFRAS)))
     args.ocultar = [CIFRAS.get(c, c) for c in args.ocultar]
+    args.llm = _modelo(args, conf["ai"])
     return args
+
+
+def _modelo(args: argparse.Namespace, ai: dict) -> dict:
+    """Qué modelo escribe los titulares. CRONICA_LLM manda sobre el servidor de los ajustes, --ai MODELO sobre su
+    modelo; con el modelo encendido en los ajustes, los titulares los escribe él aunque no se pase --ai."""
+    ai = dict(ai)
+    if os.environ.get("CRONICA_LLM"):
+        url = os.environ["CRONICA_LLM"]
+        ai.update(url=url, backend="openai" if "/v1" in url or url.rstrip("/").endswith(":1234") else "ollama")
+    if args.ia is None and ai["backend"] != "off" and not os.environ.get("CRONICA_LLM"):
+        args.ia = ai.get("model", "")
+    if args.ia is not None and ai["backend"] == "off":
+        ai["backend"] = "ollama"
+    if args.ia:
+        ai["model"] = args.ia
+    return ai
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -160,6 +185,10 @@ def main(argv: list[str] | None = None) -> int:
         except (AttributeError, ValueError):
             pass
     args = _argumentos(argv)
+    # Doble clic en cronica.exe, sin carpeta: se abre la redacción.
+    doble_clic = getattr(sys, "frozen", False) and len(sys.argv) == 1 and argv is None
+    if args.ajustes or doble_clic:
+        return ajustes.abrir_ventana()
     try:
         return _ejecutar(args)
     except KeyboardInterrupt:
@@ -569,7 +598,7 @@ def _textos(trabajo: Path, otros: list[Path], nombre: str, escenas: list[dict], 
     if args.ia is not None:
         print(_("  escribiendo los rótulos con el modelo local…"), end=" ", flush=True)
         try:
-            ia = rotulos.con_ia(nombre, hitos, args.ia or None, i18n.idioma)
+            ia = rotulos.con_ia(nombre, hitos, args.ia or None, i18n.idioma, args.llm)
             por_nn = {h["nn"]: _clave(h) for h in hitos}
             por_clave.update({por_nn[nn]: texto for nn, texto in ia["rotulos"].items() if nn in por_nn})
             titulo, cierre = ia["titulo"], ia["cierre"]

@@ -216,8 +216,13 @@ EN = {
     "la rama que se recorre (por defecto, la que está activa)": "the branch to walk (by default, the active one)",
     "qué se fotografía; auto = Storybook si lo hay, si no la app, si no un index.html":
         "what is photographed; auto = Storybook if there is one, else the app, else an index.html",
-    "rótulos escritos por un modelo local (Ollama en :11434 o CRONICA_LLM=http://…/v1)":
-        "headlines written by a local model (Ollama on :11434 or CRONICA_LLM=http://…/v1)",
+    "rótulos escritos por un modelo (el de los ajustes; si no, Ollama en :11434 o CRONICA_LLM=http://…/v1)":
+        "headlines written by a model (the one in the settings; otherwise Ollama on :11434 or CRONICA_LLM=http://…/v1)",
+    "abre la redacción: la ventana donde se eligen el idioma, el modelo de IA, la música y la estética":
+        "opens the newsroom: the window where you choose the language, the AI model, the music and the look",
+    "La redacción está en {u} (cierra la ventana para terminar).":
+        "The newsroom is at {u} (close the window to finish).",
+    "Pulsa Intro cuando hayas terminado…": "Press Enter when you are done…",
     "la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio":
         "the music: a generated style (console, the default; newsreel; ambient) or an audio file of your own",
     "sin música": "no music",

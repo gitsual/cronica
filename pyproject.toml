@@ -19,4 +19,4 @@ cronica = "cronica.cli:main"
 packages = ["cronica"]
 
 [tool.setuptools.package-data]
-cronica = ["reproductor/esteticas/*.html", "reproductor/fonts/*"]
+cronica = ["reproductor/esteticas/*.html", "reproductor/fonts/*", "redaccion/*.html"]

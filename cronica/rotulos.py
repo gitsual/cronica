@@ -77,19 +77,32 @@ def chip(c: Commit) -> str:
 
 # ---------------------------------------------------------------- IA local
 
-def _llm(prompt: str, modelo: str | None) -> str:
-    base = os.environ.get("CRONICA_LLM", "http://127.0.0.1:11434").rstrip("/")
-    if "/v1" in base or base.endswith(":1234"):                       # compatible con OpenAI (LM Studio, llama-server)
-        url = base if base.endswith("/chat/completions") else base.rstrip("/") + ("" if base.endswith("/v1") else "/v1") + "/chat/completions"
-        cuerpo = {"model": modelo or "local", "temperature": 0.3, "messages": [{"role": "user", "content": prompt}]}
+def llm(prompt: str, modelo: str | None, ai: dict | None = None, json_mode: bool = True, timeout: float = 600) -> str:
+    """Una pregunta al modelo. `ai` es la sección de los ajustes ({backend, url, model, key}); sin ella, Ollama
+    en :11434 o lo que diga CRONICA_LLM."""
+    if ai is None:
+        url_env = os.environ.get("CRONICA_LLM", "http://127.0.0.1:11434")
+        compatible = "/v1" in url_env or url_env.rstrip("/").endswith(":1234")
+        ai = {"backend": "openai" if compatible else "ollama", "url": url_env, "model": "", "key": ""}
+    from .ajustes import base as base_de
+    base = base_de(ai)
+    cab = {"Content-Type": "application/json"}
+    if ai.get("backend") == "openai":                                 # compatible con OpenAI (LM Studio, llama-server, LiteLLM…)
+        url = base if base.endswith("/chat/completions") else base + ("" if base.endswith("/v1") else "/v1") + "/chat/completions"
+        cuerpo = {"model": modelo or ai.get("model") or "local", "temperature": 0.3,
+                  "messages": [{"role": "user", "content": prompt}]}
+        if ai.get("key"):
+            cab["Authorization"] = f"Bearer {ai['key']}"
         leer = lambda d: d["choices"][0]["message"]["content"]
     else:                                                             # Ollama
         url = base + "/api/chat"
-        cuerpo = {"model": modelo or _modelo_ollama(base), "stream": False, "format": "json",
+        cuerpo = {"model": modelo or ai.get("model") or _modelo_ollama(base), "stream": False,
                   "options": {"temperature": 0.3, "num_ctx": 16384}, "messages": [{"role": "user", "content": prompt}]}
+        if json_mode:
+            cuerpo["format"] = "json"
         leer = lambda d: d["message"]["content"]
-    req = urllib.request.Request(url, json.dumps(cuerpo).encode(), {"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=600) as r:
+    req = urllib.request.Request(url, json.dumps(cuerpo).encode(), cab)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return leer(json.loads(r.read()))
 
 
@@ -102,7 +115,7 @@ def _modelo_ollama(base: str) -> str:
     return next((m for p in preferidos for m in modelos if m.startswith(p) and "embed" not in m), modelos[0])
 
 
-def con_ia(nombre: str, hitos: list[dict], modelo: str | None, idioma: str = "en") -> dict:
+def con_ia(nombre: str, hitos: list[dict], modelo: str | None, idioma: str = "en", ai: dict | None = None) -> dict:
     """{'titulo', 'cierre', 'rotulos': {nn: texto}} escrito por el modelo; lanza si no responde bien."""
     bloques = []
     for h in hitos:
@@ -130,7 +143,7 @@ Answer ONLY with JSON: {{"titulo": "...", "cierre": "...", "rotulos": {{"<nn>": 
 
 MILESTONES
 {chr(10).join(bloques)}"""
-    texto = _llm(prompt, modelo)
+    texto = llm(prompt, modelo, ai)
     m = re.search(r"\{.*\}", texto, re.S)
     datos = json.loads(m.group(0) if m else texto)
     rot = {str(k): str(v).strip() for k, v in (datos.get("rotulos") or {}).items() if str(v).strip()}
