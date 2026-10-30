@@ -68,7 +68,16 @@ class Camara:
             self.page.evaluate("([x, y, o]) => window.__cronica && window.__cronica(x, y, o)", [self.x, self.y, self.onda])
         except Exception:
             pass
-        self.page.screenshot(path=str(self.carpeta / f"{self.n:04d}.jpg"), type="jpeg", quality=86)
+        ruta = str(self.carpeta / f"{self.n:04d}.jpg")
+        try:
+            self.page.screenshot(path=ruta, type="jpeg", quality=86)
+        except Exception:
+            # Un clic en un enlace: la foto ha caído en mitad de la navegación. Se espera a la página nueva.
+            try:
+                self.page.wait_for_load_state("load", timeout=8_000)
+            except Exception:
+                pass
+            self.page.screenshot(path=ruta, type="jpeg", quality=86)
         self.n += 1
         self.onda = max(0.0, self.onda - 0.2)
 
