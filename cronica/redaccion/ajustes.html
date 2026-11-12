@@ -117,6 +117,8 @@
   <div class="campos" style="margin-top:0">
     <label data-t="musica"></label>
     <div class="opciones">
+      <label class="opcion"><input type="radio" name="music" value="taller"><b data-t="taller"></b><small data-t="taller_p"></small></label>
+      <label class="opcion"><input type="radio" name="music" value="cuento"><b data-t="cuento"></b><small data-t="cuento_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="consola"><b data-t="consola"></b><small data-t="consola_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="noticiario"><b data-t="noticiario"></b><small data-t="noticiario_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="ambiente"><b data-t="ambiente"></b><small data-t="ambiente_p"></small></label>
@@ -158,7 +160,9 @@ const T = {
     openai: 'OpenAI-compatible server', openai_p: 'LM Studio, llama-server, vLLM, LiteLLM… on this machine or on your network.',
     servidor: 'Server', clave: 'API key', modelo: 'Model', buscar: 'Find models', probar: 'Test',
     pelicula: 'The film', pelicula_p: 'How it sounds, how it looks, and how long it is.',
-    musica: 'Music', consola: 'Console', consola_p: 'A cheerful swing tune, like a console menu.',
+    musica: 'Music', taller: 'Workshop', taller_p: 'A storybook tune from an inventor’s workshop: bassoon, accordion, clarinet and glockenspiel.',
+    cuento: 'Fable', cuento_p: 'Night and mystery: a music box going round, a harp, low strings and a flute.',
+    consola: 'Console', consola_p: 'A cheerful swing tune, like a console menu.',
     noticiario: 'Newsreel', noticiario_p: 'A cinema newsreel march, brass and snare.',
     ambiente: 'Ambient', ambiente_p: 'A pad with no melody, a chord per scene.',
     estetica: 'Look', diario: 'Newspaper', diario_p: 'A front page per pull request.',
@@ -182,7 +186,9 @@ const T = {
     openai: 'Servidor compatible con OpenAI', openai_p: 'LM Studio, llama-server, vLLM, LiteLLM… en esta máquina o en tu red.',
     servidor: 'Servidor', clave: 'Clave de API', modelo: 'Modelo', buscar: 'Buscar modelos', probar: 'Probar',
     pelicula: 'El vídeo', pelicula_p: 'Cómo suena, cómo se ve y cuánto dura.',
-    musica: 'Música', consola: 'Consola', consola_p: 'Una canción alegre con swing, como un menú de consola.',
+    musica: 'Música', taller: 'Taller', taller_p: 'Una canción de cuento, del taller de un inventor: fagot, acordeón, clarinete y glockenspiel.',
+    cuento: 'Cuento', cuento_p: 'De noche y con misterio: una caja de música que da vueltas, arpa, cuerdas graves y una flauta.',
+    consola: 'Consola', consola_p: 'Una canción alegre con swing, como un menú de consola.',
     noticiario: 'Noticiario', noticiario_p: 'Una marcha de noticiario de cine, metales y caja.',
     ambiente: 'Ambiente', ambiente_p: 'Un fondo sin melodía, un acorde por escena.',
     estetica: 'Estética', diario: 'Diario', diario_p: 'Una primera plana por pull request.',

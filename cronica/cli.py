@@ -67,7 +67,7 @@ def _abrir_chromium(p):
 
 
 # Los nombres en inglés son los de la documentación; los de antes, en español, siguen valiendo.
-MUSICAS = {"console": "consola", "newsreel": "noticiario", "ambient": "ambiente"}
+MUSICAS = {"workshop": "taller", "fable": "cuento", "console": "consola", "newsreel": "noticiario", "ambient": "ambiente"}
 LOOKS = {"newspaper": "diario", "classic": "clasica"}
 FORMATOS = {"landscape": "horizontal", "portrait": "vertical"}
 MODOS = {"static": "estatico"}
@@ -111,7 +111,7 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--ai", "--ia", dest="ia", nargs="?", const="", metavar="MODEL",
                     help=_("rótulos escritos por un modelo (el de los ajustes; si no, Ollama en :11434 o CRONICA_LLM=http://…/v1)"))
     ap.add_argument("--music", "--musica", dest="musica", metavar="STYLE|FILE", default=conf["music"],
-                    help=_("la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio"))
+                    help=_("la música: un estilo generado (workshop, por defecto; fable; console; newsreel; ambient) o un fichero de audio propio"))
     ap.add_argument("--no-music", "--sin-musica", dest="sin_musica", action="store_true", help=_("sin música"))
     ap.add_argument("--seconds", "--segundos", dest="segundos", type=float, default=conf["seconds"],
                     help=_("segundos como mucho de app en uso por hito (6)"))
@@ -159,7 +159,7 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     if args.duracion < 0:
         ap.error(_("--duration: los segundos no pueden ser negativos"))
     if args.musica not in musica.ESTILOS and not Path(args.musica).is_file():
-        ap.error(_("--music: «{e}» no es console, newsreel ni ambient ni un fichero que exista", e=args.musica))
+        ap.error(_("--music: «{e}» no es workshop, fable, console, newsreel ni ambient ni un fichero que exista", e=args.musica))
     validas = set(CIFRAS) | set(CIFRAS.values())
     for c in args.ocultar:
         if c not in validas:

@@ -267,11 +267,13 @@ history of three hundred commits it is the thirty that changed the interface tha
 The music is written by the program for each film, so there are no rights to clear: its length is the film's, and
 every scene change lands on it.
 
-<p align="center"><img src="assets/musica.png" alt="Three waveforms: console, a swing tune with a melody; newsreel, a march with clear beats; ambient, a continuous pad" width="100%"></p>
+<p align="center"><img src="assets/musica.png" alt="The waveforms of the older styles: console, a swing tune with a melody; newsreel, a march with clear beats; ambient, a continuous pad" width="100%"></p>
 
 | | Listen (40 s) |
 |---|---|
-| `--music console` (default): a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
+| `--music workshop` (default): a storybook tune from an inventor's workshop, in the manner of Tomohito Nishiura's music for Dark Chronicle. A♭ major at 100 bpm: a bassoon bouncing on every beat over a pizzicato double bass, musette accordion, a clarinet with grace notes and chromatic turns, a glockenspiel answering every phrase, a woodblock | [musica-taller.mp3](https://github.com/gitsual/cronica/releases/download/v0.5.0/musica-taller.mp3) |
+| `--music fable`: night and mystery, in the manner of «The Spirit King» from Dark Cloud. C minor at 117 bpm: a music box going round the chord in eighth notes, a harp, low strings holding the pedal two bars at a time, a flute on every other round, bells on every scene; warm and dark | [musica-cuento.mp3](https://github.com/gitsual/cronica/releases/download/v0.5.0/musica-cuento.mp3) |
+| `--music console`: a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
 | `--music newsreel`: a cinema newsreel march in B♭ at 128 bpm, fanfare, brass melody, tuba, snare rolls and a cymbal on every part; made for the newspaper look | [musica-noticiario.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-noticiario.mp3) |
 | `--music ambient`: a pad with no melody that changes chord with every scene | [musica-ambiente.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-ambiente.mp3) |
 | `--music track.mp3` · `--no-music` | your own track, or silence |
@@ -334,7 +336,7 @@ Headlines that come from your pull request titles stay as they were written. The
 | `--branch develop` | another branch (also `origin/develop`) |
 | `--mode storybook\|web\|static` | force what is photographed |
 | `--ai [model]` | headlines written by the model chosen in the settings; without one, Ollama on `127.0.0.1:11434` (`CRONICA_LLM=http://…/v1` points it at an OpenAI-compatible server) |
-| `--music console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
+| `--music workshop\|fable\|console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
 | `--look newspaper\|classic\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
 | `--seconds 6` | seconds of app in use per issue, at most |
 | `--duration 60` | the whole film runs this long at most: clips play faster (up to 2×) and, if that is not enough, the issues in the middle with the least news are left out |

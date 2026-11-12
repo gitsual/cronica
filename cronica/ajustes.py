@@ -24,7 +24,7 @@ OLLAMA, OPENAI = "http://127.0.0.1:11434", "http://127.0.0.1:1234/v1"
 DEFECTO = {
     "lang": "en",
     "ai": {"backend": "off", "url": "", "model": "", "key": ""},
-    "music": "consola",
+    "music": "taller",
     "look": "diario",
     "max_milestones": 30,
     "seconds": 6.0,
