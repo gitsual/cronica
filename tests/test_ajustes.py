@@ -60,7 +60,7 @@ def test_lo_que_no_tiene_sentido_no_se_guarda():
     s = ajustes.guardar({"lang": "fr", "ai": {"backend": "skynet", "model": " qwen3 "}, "music": "rock",
                          "max_milestones": "9999", "seconds": "x"})
     assert s["lang"] == "en" and s["ai"]["backend"] == "off" and s["ai"]["model"] == "qwen3"
-    assert s["music"] == "consola" and s["max_milestones"] == 200
+    assert s["music"] == "taller" and s["max_milestones"] == 200
     assert ajustes.leer() == s
 
 
@@ -126,3 +126,10 @@ def test_los_titulares_usan_el_modelo_de_los_ajustes(falso):
     finally:
         _Falso.do_POST = _Falso.do_POST_original
     assert r["rotulos"] == {"01": "Uno"} and r["titulo"] == "T"
+
+
+def test_duracion_y_formato():
+    s = ajustes.guardar({"duration": "60", "format": "vertical", "look": "clasica"})
+    assert (s["duration"], s["format"], s["look"]) == (60.0, "vertical", "diario")   # la clásica no sabe ser vertical
+    s = ajustes.guardar({"duration": -5, "format": "cuadrado"})
+    assert (s["duration"], s["format"]) == (0.0, "horizontal")

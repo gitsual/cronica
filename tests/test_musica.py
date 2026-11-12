@@ -18,7 +18,8 @@ def test_cada_estilo_suena_lo_que_dura_el_video(tmp_path, estilo):
 
 
 def test_estilo_o_fichero(tmp_path):
-    assert _argumentos([str(tmp_path)]).musica == "consola"
+    assert _argumentos([str(tmp_path)]).musica == "taller"
+    assert _argumentos([str(tmp_path), "--music", "fable"]).musica == "cuento"
     assert _argumentos([str(tmp_path), "--musica", "noticiario"]).musica == "noticiario"
     pista = tmp_path / "pista.mp3"
     pista.write_bytes(b"")

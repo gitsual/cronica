@@ -237,7 +237,7 @@ function seek (t) {
     if (prev && prev.fotogramas && local < TRANS) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
     $('a').style.opacity = prev && prev.fotogramas && local < TRANS ? 1 : 0; $('b').style.opacity = 0
   } else {
-    const f = Math.floor(local * D.fps_clip / 1000)
+    const f = Math.floor(local * D.fps_clip * (h.vel || 1) / 1000)  // vel: el clip acelerado para caber en la duración
     espera.push(poner($('b'), fotograma(h, f)))
     const conA = prev && prev.fotogramas && local < TRANS
     if (conA) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))

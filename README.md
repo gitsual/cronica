@@ -13,7 +13,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <p><strong>Give it the folder of a project with an interface.<br>It hands back the film of how that interface grew: one front page per pull request.</strong></p>
 
 <p>
-  <img alt="version 0.4.0" src="https://img.shields.io/badge/version-0.4.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="version 0.5.0" src="https://img.shields.io/badge/version-0.5.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="49 tests" src="https://img.shields.io/badge/tests-49-191612?style=for-the-badge&labelColor=191612&color=5A5247">
@@ -189,6 +189,10 @@ frame, the figures on the right and the screens piling up beside it.
   <a href="assets/video/garden-classic.mp4"><img src="assets/gifs/classic.gif" alt="The classic look: a dark background, the headline, the app in a browser frame, the figures and a column of screens" width="100%"></a>
 </p>
 
+With `--format vertical` the newspaper is set in a single column for a phone: masthead, headline with the stamp beside
+it, the front-page photo across, the figures in two columns, the archive and the strip below. `--duration 60` fits
+the whole film into a minute. Both are also in the settings window.
+
 A look is a single HTML page that reads `datos.json` and exposes `seek(t)`: `--look my-page.html` uses yours. Every
 word and date it shows arrives already translated in `datos.json`, so your own look speaks every language cronica
 does. The two that ship are in [`cronica/reproductor/esteticas/`](cronica/reproductor/esteticas). The typefaces
@@ -263,11 +267,13 @@ history of three hundred commits it is the thirty that changed the interface tha
 The music is written by the program for each film, so there are no rights to clear: its length is the film's, and
 every scene change lands on it.
 
-<p align="center"><img src="assets/musica.png" alt="Three waveforms: console, a swing tune with a melody; newsreel, a march with clear beats; ambient, a continuous pad" width="100%"></p>
+<p align="center"><img src="assets/musica.png" alt="The waveforms of the older styles: console, a swing tune with a melody; newsreel, a march with clear beats; ambient, a continuous pad" width="100%"></p>
 
 | | Listen (40 s) |
 |---|---|
-| `--music console` (default): a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
+| `--music workshop` (default): a storybook tune from an inventor's workshop, in the manner of Tomohito Nishiura's music for Dark Chronicle. A♭ major at 100 bpm: a bassoon bouncing on every beat over a pizzicato double bass, musette accordion, a clarinet with grace notes and chromatic turns, a glockenspiel answering every phrase, a woodblock | [musica-taller.mp3](https://github.com/gitsual/cronica/releases/download/v0.5.0/musica-taller.mp3) |
+| `--music fable`: night and mystery, in the manner of «The Spirit King» from Dark Cloud. C minor at 117 bpm: a music box going round the chord in eighth notes, a harp, low strings holding the pedal two bars at a time, a flute on every other round, bells on every scene; warm and dark | [musica-cuento.mp3](https://github.com/gitsual/cronica/releases/download/v0.5.0/musica-cuento.mp3) |
+| `--music console`: a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
 | `--music newsreel`: a cinema newsreel march in B♭ at 128 bpm, fanfare, brass melody, tuba, snare rolls and a cymbal on every part; made for the newspaper look | [musica-noticiario.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-noticiario.mp3) |
 | `--music ambient`: a pad with no melody that changes chord with every scene | [musica-ambiente.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-ambiente.mp3) |
 | `--music track.mp3` · `--no-music` | your own track, or silence |
@@ -330,9 +336,11 @@ Headlines that come from your pull request titles stay as they were written. The
 | `--branch develop` | another branch (also `origin/develop`) |
 | `--mode storybook\|web\|static` | force what is photographed |
 | `--ai [model]` | headlines written by the model chosen in the settings; without one, Ollama on `127.0.0.1:11434` (`CRONICA_LLM=http://…/v1` points it at an OpenAI-compatible server) |
-| `--music console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
+| `--music workshop\|fable\|console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
 | `--look newspaper\|classic\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
 | `--seconds 6` | seconds of app in use per issue, at most |
+| `--duration 60` | the whole film runs this long at most: clips play faster (up to 2×) and, if that is not enough, the issues in the middle with the least news are left out |
+| `--format horizontal\|vertical` | 16:9 (default) or 9:16 for phones; vertical is laid out as a one-column front page (newspaper look only) |
 | `--hide lines` | a figure that does not appear in the film (`components`, `screens`, `stories`, `files`, `lines`, `commits`, `authors`; repeatable) |
 | `--name folder=name` | the name a repository appears under (if it was renamed) |
 | `--also other-folder` | a repository that does not appear on screen but counts in the figures |
@@ -451,9 +459,9 @@ through corepack).
 
 ## Verification
 
-| Suite | Command | Result for 0.4.0 |
+| Suite | Command | Result for 0.5.0 |
 |---|---|---|
-| Unit and end to end | `python -m pytest -q` | 49 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, and the settings window against a fake model server |
+| Unit and end to end | `python -m pytest -q` | 59 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, the five music styles, and the settings window against a fake model server |
 | The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
 | The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 

@@ -224,10 +224,22 @@ EN = {
         "The newsroom is at {u} (close the window to finish).",
     "Pulsa Intro cuando hayas terminado…": "Press Enter when you are done…",
     "No he podido abrir la ventana ({e}); la abro en tu navegador.": "Could not open the window ({e}); opening it in your browser.",
-    "la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio":
-        "the music: a generated style (console, the default; newsreel; ambient) or an audio file of your own",
+    "la música: un estilo generado (workshop, por defecto; fable; console; newsreel; ambient) o un fichero de audio propio":
+        "the music: a generated style (workshop, the default; fable; console; newsreel; ambient) or an audio file of your own",
     "sin música": "no music",
     "segundos como mucho de app en uso por hito (6)": "seconds of app in use per milestone, at most (6)",
+    "cuánto dura el vídeo como mucho, en segundos (0 = lo que pida la historia): acelera los clips y, "
+    "si hace falta, deja fuera hitos del medio":
+        "how long the film runs at most, in seconds (0 = as long as the story needs): clips play faster and, "
+        "if needed, milestones in the middle are left out",
+    "horizontal (16:9, por defecto) o vertical (9:16, para el móvil)":
+        "horizontal (16:9, default) or vertical (9:16, for phones)",
+    "--format vertical: de momento solo con la estética newspaper": "--format vertical: only with the newspaper look, for now",
+    "--duration: los segundos no pueden ser negativos": "--duration: seconds cannot be negative",
+    "  encajado en {o} s (salía de {n} s)": "  fitted into {o} s (it ran {n} s)",
+    " · {q} hitos fuera": " · {q} milestones left out",
+    " · clips a {v}×": " · clips at {v}×",
+    " · los clips más largos se cortan por el final": " · the longest clips are cut at the end",
     "no graba el vídeo: deja fotogramas sueltos para revisar": "no film: leaves single frames to review",
     "vuelve a construir los hitos que fallaron": "builds again the milestones that failed",
     "vuelve a grabar la app en uso desde los sitios ya construidos (sin build)":
@@ -250,7 +262,7 @@ EN = {
         "how the film looks: newspaper (default) or classic, or the path of your own .html",
     "--look: «{e}» no es newspaper ni classic ni un .html que exista":
         "--look: «{e}» is not newspaper, classic or an existing .html",
-    "--music: «{e}» no es console, newsreel ni ambient ni un fichero que exista":
-        "--music: «{e}» is not console, newsreel, ambient or an existing file",
+    "--music: «{e}» no es workshop, fable, console, newsreel ni ambient ni un fichero que exista":
+        "--music: «{e}» is not workshop, fable, console, newsreel, ambient or an existing file",
     "--hide: «{e}» no es una cifra ({c})": "--hide: «{e}» is not a figure ({c})",
 }

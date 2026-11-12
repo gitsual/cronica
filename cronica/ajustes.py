@@ -3,7 +3,7 @@
     cronica --settings          (o doble clic en cronica.exe sin carpeta)
 
 Lo que se guarda aquí son los valores por defecto de cada vídeo: el idioma, el modelo que escribe los titulares,
-la música, la estética, cuántos hitos y cuántos segundos de app en uso. Una opción en la línea de órdenes manda
+la música, la estética, cuántos hitos y cuántos segundos de app en uso, la duración máxima y el formato. Una opción en la línea de órdenes manda
 sobre el ajuste; el ajuste, sobre el valor de fábrica.
 """
 from __future__ import annotations
@@ -24,10 +24,12 @@ OLLAMA, OPENAI = "http://127.0.0.1:11434", "http://127.0.0.1:1234/v1"
 DEFECTO = {
     "lang": "en",
     "ai": {"backend": "off", "url": "", "model": "", "key": ""},
-    "music": "consola",
+    "music": "taller",
     "look": "diario",
     "max_milestones": 30,
     "seconds": 6.0,
+    "duration": 0.0,
+    "format": "horizontal",
 }
 
 
@@ -62,6 +64,14 @@ def _limpiar(d: dict) -> dict:
         salida["seconds"] = max(1.0, min(60.0, float(d.get("seconds", 6.0))))
     except (TypeError, ValueError):
         pass
+    try:
+        salida["duration"] = max(0.0, min(3600.0, float(d.get("duration", 0.0))))
+    except (TypeError, ValueError):
+        pass
+    if d.get("format") in montaje.FORMATOS:
+        salida["format"] = d["format"]
+    if salida["format"] == "vertical" and salida["look"] in montaje.ESTETICAS and salida["look"] not in montaje.VERTICALES:
+        salida["look"] = montaje.VERTICALES[0]
     return salida
 
 

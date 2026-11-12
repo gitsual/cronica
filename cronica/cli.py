@@ -67,8 +67,9 @@ def _abrir_chromium(p):
 
 
 # Los nombres en inglés son los de la documentación; los de antes, en español, siguen valiendo.
-MUSICAS = {"console": "consola", "newsreel": "noticiario", "ambient": "ambiente"}
+MUSICAS = {"workshop": "taller", "fable": "cuento", "console": "consola", "newsreel": "noticiario", "ambient": "ambiente"}
 LOOKS = {"newspaper": "diario", "classic": "clasica"}
+FORMATOS = {"landscape": "horizontal", "portrait": "vertical"}
 MODOS = {"static": "estatico"}
 CIFRAS = {"components": "componentes", "screens": "pantallas", "stories": "stories", "files": "ficheros",
           "lines": "lineas", "commits": "commits", "authors": "autores"}
@@ -110,10 +111,16 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--ai", "--ia", dest="ia", nargs="?", const="", metavar="MODEL",
                     help=_("rótulos escritos por un modelo (el de los ajustes; si no, Ollama en :11434 o CRONICA_LLM=http://…/v1)"))
     ap.add_argument("--music", "--musica", dest="musica", metavar="STYLE|FILE", default=conf["music"],
-                    help=_("la música: un estilo generado (console, por defecto; newsreel; ambient) o un fichero de audio propio"))
+                    help=_("la música: un estilo generado (workshop, por defecto; fable; console; newsreel; ambient) o un fichero de audio propio"))
     ap.add_argument("--no-music", "--sin-musica", dest="sin_musica", action="store_true", help=_("sin música"))
     ap.add_argument("--seconds", "--segundos", dest="segundos", type=float, default=conf["seconds"],
                     help=_("segundos como mucho de app en uso por hito (6)"))
+    ap.add_argument("--duration", "--duracion", dest="duracion", type=float, default=conf["duration"], metavar="SECONDS",
+                    help=_("cuánto dura el vídeo como mucho, en segundos (0 = lo que pida la historia): acelera los clips y, "
+                           "si hace falta, deja fuera hitos del medio"))
+    ap.add_argument("--format", "--formato", dest="formato", default=conf["format"],
+                    choices=("horizontal", "vertical", "landscape", "portrait"),
+                    help=_("horizontal (16:9, por defecto) o vertical (9:16, para el móvil)"))
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--preview", "--previa", dest="previa", action="store_true",
                     help=_("no graba el vídeo: deja fotogramas sueltos para revisar"))
@@ -146,8 +153,13 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     args.estetica = LOOKS.get(args.estetica, args.estetica)
     if args.estetica not in montaje.ESTETICAS and not Path(args.estetica).is_file():
         ap.error(_("--look: «{e}» no es newspaper ni classic ni un .html que exista", e=args.estetica))
+    args.formato = FORMATOS.get(args.formato, args.formato)
+    if args.formato == "vertical" and args.estetica in montaje.ESTETICAS and args.estetica not in montaje.VERTICALES:
+        ap.error(_("--format vertical: de momento solo con la estética newspaper"))
+    if args.duracion < 0:
+        ap.error(_("--duration: los segundos no pueden ser negativos"))
     if args.musica not in musica.ESTILOS and not Path(args.musica).is_file():
-        ap.error(_("--music: «{e}» no es console, newsreel ni ambient ni un fichero que exista", e=args.musica))
+        ap.error(_("--music: «{e}» no es workshop, fable, console, newsreel ni ambient ni un fichero que exista", e=args.musica))
     validas = set(CIFRAS) | set(CIFRAS.values())
     for c in args.ocultar:
         if c not in validas:
@@ -300,8 +312,14 @@ def _ejecutar(args: argparse.Namespace) -> int:
                              ecosistema if len(ecosistema) > 1 else None)
         textos = _textos(trabajo, [c.trabajo for c in capitulos], nombre, escenas, args)
         tipo = capitulos[0].tipo
-        video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos, tuple(args.ocultar), args.estetica)
+        video = montaje.preparar(trabajo / "video", nombre, tipo, escenas, textos, tuple(args.ocultar), args.estetica,
+                                 args.formato, args.duracion)
         duracion = montaje.duracion_ms(video)
+        if a := video.get("ajuste"):
+            print(_("  encajado en {o} s (salía de {n} s)", o=f"{a['objetivo_s']:g}", n=f"{a['natural_s']:.0f}")
+                  + (_(" · {q} hitos fuera", q=a["quitados"]) if a["quitados"] else "")
+                  + (_(" · clips a {v}×", v=f"{a['vel']:g}") if a["vel"] > 1 else "")
+                  + (_(" · los clips más largos se cortan por el final") if a["corta"] else ""))
 
         if args.previa:
             instantes = [1000] + [h["inicio"] + int(h["dur"] * 0.6) for h in video["hitos"]] + [duracion - 2000]
