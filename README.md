@@ -13,7 +13,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <p><strong>Give it the folder of a project with an interface.<br>It hands back the film of how that interface grew: one front page per pull request.</strong></p>
 
 <p>
-  <img alt="version 0.7.0" src="https://img.shields.io/badge/version-0.7.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="version 0.7.1" src="https://img.shields.io/badge/version-0.7.1-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="49 tests" src="https://img.shields.io/badge/tests-49-191612?style=for-the-badge&labelColor=191612&color=5A5247">
@@ -47,8 +47,11 @@ This one is written by your git history, and the photographs are taken by a brow
 <p align="center"><sub>Preview without sound.
 <a href="assets/video/garden-newspaper.mp4"><b>The whole film with music</b></a> (0:41) ·
 <a href="assets/video/garden-classic.mp4"><b>The same history, classic look</b></a> (0:41) ·
-<a href="assets/video/huerto-diario.mp4"><b>En español</b></a> (0:41).
-Nobody edited any of them: <code>cronica garden</code> made them from the folder.</sub></p>
+<a href="assets/video/huerto-diario.mp4"><b>En español</b></a> (0:41) ·
+<a href="assets/video/garden-vertical.mp4"><b>Vertical, for a phone</b></a> (0:30).
+Nobody edited any of them: <code>cronica garden</code> made them from the folder, fitting a track to each film
+bar by bar.<br>Music: <i>Café Bossa Nova</i>, <i>Violet Evening</i>, <i>Japanese Jazz</i> and <i>Network Center Lobby</i>,
+made with <a href="https://suno.com">Suno</a>, used non-commercially with credit.</sub></p>
 
 ## What it is
 
@@ -193,6 +196,13 @@ With `--format vertical` the newspaper is set in a single column for a phone: ma
 it, the front-page photo across, the figures in two columns, the archive and the strip below. `--duration 60` fits
 the whole film into a minute. Both are also in the settings window.
 
+<p align="center">
+  <a href="assets/video/garden-vertical.mp4"><img src="assets/frames/vertical.jpg" alt="The vertical film: masthead, the headline with the stamp beside it, the front-page photo across, the figures in two columns and the archive below" width="32%"></a>
+</p>
+
+<p align="center"><sub><code>cronica garden --format vertical --duration 30 --music "Network Center Lobby A"</code>: the nine issues
+fitted into 30 seconds, clips at 1.46×.</sub></p>
+
 A look is a single HTML page that reads `datos.json` and exposes `seek(t)`: `--look my-page.html` uses yours. Every
 word and date it shows arrives already translated in `datos.json`, so your own look speaks every language cronica
 does. The two that ship are in [`cronica/reproductor/esteticas/`](cronica/reproductor/esteticas). The typefaces
@@ -291,7 +301,8 @@ jumping between two bars that sound alike and keep their place in the four-bar p
 stretch of 16 to 32 bars in a loop until the ending is due. What is left over (at most three bars) is absorbed by
 playing the whole track up to 6 % slower, pitch unchanged. Each scene change gets a triangle on the nearest beat.
 Tracks dropped in the `pistas` folder next to the settings (`%APPDATA%\cronica\pistas` on Windows) appear by
-name in the newsroom and work as `--music "Name"`. Mind the rights of what you put there. With more than one, `--music random`
+name in the newsroom and work as `--music "Name"`. Mind the rights of what you put there: the films at the top of
+this page play tracks made with Suno, whose free plan allows non-commercial use with credit. With more than one, `--music random`
 (or *Any of your tracks* in the newsroom) picks a different one for each film.
 
 Two commands work on tracks outside a film: `python -m cronica.musica preparar track.mp3` measures it and writes
@@ -479,10 +490,10 @@ through corepack).
 
 ## Verification
 
-| Suite | Command | Result for 0.7.0 |
+| Suite | Command | Result for 0.7.1 |
 |---|---|---|
 | Unit and end to end | `python -m pytest -q` | 69 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, every music style (the orchestra included), a track of your own fitted bar by bar, and the settings window against a fake model server |
-| The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
+| The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish, and vertical in 30 s; each with a track fitted bar by bar |
 | The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 
 ---
