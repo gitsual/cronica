@@ -167,7 +167,7 @@ const T = {
     vals: 'Waltz', vals_p: 'A café waltz in D minor: accordion, pizzicato oom-pah-pah.',
     taller: 'Workshop', taller_p: 'An inventor’s workshop: bassoon, accordion on the off-beat, clarinet and glockenspiel.',
     cuento: 'Fable', cuento_p: 'Night and mystery: harp and music box going round, cellos, flute and oboe.',
-    pista: 'Your track, fitted to each film bar by bar.', pistas_vacio: t => `Tracks of your own go in ${t}`,
+    pista: 'Your track, fitted to each film bar by bar.', aleatoria: 'Any of your tracks', aleatoria_p: 'A different one for each film, at random.', pistas_vacio: t => `Tracks of your own go in ${t}`,
     consola: 'Console', consola_p: 'A cheerful swing tune, like a console menu.',
     noticiario: 'Newsreel', noticiario_p: 'A cinema newsreel march, brass and snare.',
     ambiente: 'Ambient', ambiente_p: 'A pad with no melody, a chord per scene.',
@@ -196,7 +196,7 @@ const T = {
     vals: 'Vals', vals_p: 'Un vals de café en re menor: acordeón y «um-pa-pa» en pizzicato.',
     taller: 'Taller', taller_p: 'El taller de un inventor: fagot, acordeón a contratiempo, clarinete y glockenspiel.',
     cuento: 'Cuento', cuento_p: 'De noche y con misterio: arpa y caja de música dando vueltas, chelos, flauta y oboe.',
-    pista: 'Tu pista, ajustada a cada vídeo por compases.', pistas_vacio: t => `Las pistas propias van en ${t}`,
+    pista: 'Tu pista, ajustada a cada vídeo por compases.', aleatoria: 'Cualquiera de tus pistas', aleatoria_p: 'Una distinta en cada vídeo, al azar.', pistas_vacio: t => `Las pistas propias van en ${t}`,
     consola: 'Consola', consola_p: 'Una canción alegre con swing, como un menú de consola.',
     noticiario: 'Noticiario', noticiario_p: 'Una marcha de noticiario de cine, metales y caja.',
     ambiente: 'Ambiente', ambiente_p: 'Un fondo sin melodía, un acorde por escena.',
@@ -324,6 +324,12 @@ function ponerPistas (pistas, carpeta) {
     l.innerHTML = '<input type="radio" name="music"><b></b><small data-t="pista"></small>'
     l.querySelector('input').value = nombre
     l.querySelector('b').textContent = nombre
+    caja.appendChild(l)
+  }
+  if (pistas.length > 1) {
+    const l = document.createElement('label')
+    l.className = 'opcion'
+    l.innerHTML = '<input type="radio" name="music" value="aleatoria"><b data-t="aleatoria"></b><small data-t="aleatoria_p"></small>'
     caja.appendChild(l)
   }
   if (!pistas.length && carpeta) {
