@@ -228,6 +228,18 @@ EN = {
         "the music: a generated style (console, the default; newsreel; ambient) or an audio file of your own",
     "sin música": "no music",
     "segundos como mucho de app en uso por hito (6)": "seconds of app in use per milestone, at most (6)",
+    "cuánto dura el vídeo como mucho, en segundos (0 = lo que pida la historia): acelera los clips y, "
+    "si hace falta, deja fuera hitos del medio":
+        "how long the film runs at most, in seconds (0 = as long as the story needs): clips play faster and, "
+        "if needed, milestones in the middle are left out",
+    "horizontal (16:9, por defecto) o vertical (9:16, para el móvil)":
+        "horizontal (16:9, default) or vertical (9:16, for phones)",
+    "--format vertical: de momento solo con la estética newspaper": "--format vertical: only with the newspaper look, for now",
+    "--duration: los segundos no pueden ser negativos": "--duration: seconds cannot be negative",
+    "  encajado en {o} s (salía de {n} s)": "  fitted into {o} s (it ran {n} s)",
+    " · {q} hitos fuera": " · {q} milestones left out",
+    " · clips a {v}×": " · clips at {v}×",
+    " · los clips más largos se cortan por el final": " · the longest clips are cut at the end",
     "no graba el vídeo: deja fotogramas sueltos para revisar": "no film: leaves single frames to review",
     "vuelve a construir los hitos que fallaron": "builds again the milestones that failed",
     "vuelve a grabar la app en uso desde los sitios ya construidos (sin build)":

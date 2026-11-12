@@ -5,17 +5,22 @@ import json
 import os
 import shutil
 import subprocess
+import urllib.parse
 from importlib import resources
 from pathlib import Path
 
 from . import i18n
 from .i18n import _
-from .servidor import Servidor
 
 INTRO_MS, OUTRO_MS, EXTRACCION_MS, ACTO_MS = 2200, 5200, 7500, 3400
 # Cómo se ve el vídeo: la primera es la de por defecto (reproductor/esteticas/<nombre>.html).
 ESTETICAS = ("diario", "clasica")
 FPS_CLIP = 30  # los clips se graban a pasos; cada fotograma vale 1/30 s
+# El lienzo del vídeo: horizontal (16:9, la pantalla) o vertical (9:16, el móvil). Solo el diario sabe ser vertical.
+FORMATOS = {"horizontal": (1920, 1080), "vertical": (1080, 1920)}
+VERTICALES = ("diario",)
+# Al encajar el vídeo en una duración: cuánto puede acelerarse un clip y lo menos que dura una escena.
+VEL_MAX, ESCENA_MIN_MS = 2.0, 2400
 
 CIFRAS = {
     "storybook": [("componentes", "Componentes"), ("stories", "Stories"), ("ficheros", "Ficheros"),
@@ -32,10 +37,12 @@ def _rel(destino: Path, desde: Path) -> str:
 
 
 def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos: dict,
-             ocultar: tuple[str, ...] = (), estetica: str = ESTETICAS[0]) -> dict:
+             ocultar: tuple[str, ...] = (), estetica: str = ESTETICAS[0], formato: str = "horizontal",
+             duracion_s: float = 0) -> dict:
     """escenas: hitos ya grabados ({nn, sha, fecha, chip, titulo, cifras, fotos, dir, cap, barra}) y escenas
     especiales ({tipo: "extraccion", ...}), en orden. `ocultar`: cifras que no salen (p. ej. «lineas»).
     `estetica`: una de ESTETICAS o la ruta de un .html propio que lea datos.json y exponga seek() como ellas.
+    `formato`: una clave de FORMATOS. `duracion_s`: si es más de 0, el vídeo dura como mucho eso (ver encajar()).
 
     El reproductor vive en video/ y lee fotos y clips de la carpeta de trabajo de cada repositorio (no se copia
     nada): las rutas son relativas a video/ y el servidor sirve el antepasado común.
@@ -74,8 +81,9 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
                        "cambiadas": [nombres[k] for k in f.get("cambiadas", []) if k in nombres],
                        "fichas": fichas})
         t += dur
-    # Un acto abre con un cartel antes de su primera escena: la escena empieza ACTO_MS más tarde («pre»).
     actos = textos.get("actos", {})
+    ajuste = encajar(salida, actos, duracion_s * 1000) if duracion_s > 0 else None
+    # Un acto abre con un cartel antes de su primera escena: la escena empieza ACTO_MS más tarde («pre»).
     t = INTRO_MS
     for e in salida:
         if e["nn"] in actos:
@@ -96,7 +104,10 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
         "pie": textos.get("pie") or "",
         "barra": f"{'storybook' if tipo == 'storybook' else 'localhost'} · {proyecto}", "cifras": definicion,
         "ocultar": list(ocultar), "fps_clip": FPS_CLIP, "intro": INTRO_MS, "outro": OUTRO_MS, "hitos": salida,
+        "formato": formato, "ancho": FORMATOS[formato][0], "alto": FORMATOS[formato][1],
     }
+    if ajuste:
+        datos["ajuste"] = ajuste
     (video / "datos.json").write_text(json.dumps(datos, indent=1, ensure_ascii=False), encoding="utf-8")
     reproductor = resources.files("cronica").joinpath("reproductor")
     html = (reproductor.joinpath("esteticas", f"{estetica}.html") if estetica in ESTETICAS else Path(estetica))
@@ -108,16 +119,93 @@ def preparar(video: Path, proyecto: str, tipo: str, escenas: list[dict], textos:
     return datos
 
 
+def encajar(salida: list[dict], actos: dict, objetivo_ms: float) -> dict | None:
+    """Deja el vídeo en `objetivo_ms` como mucho. Lo fijo (entrada, cierre, carteles de acto y extracciones) no se
+    toca; los clips se reparten lo que queda. Primero se aceleran (hasta VEL_MAX: cada escena guarda su «vel»)
+    y, si aun así no caben, se cortan por el final. Si a cada escena le tocaría menos de ESCENA_MIN_MS, se quitan
+    hitos del medio (nunca el primero ni el último; un cartel de acto pasa al siguiente hito que se queda).
+
+    Cambia `salida` (y `actos`) en su sitio. Devuelve lo que hizo, o None si el vídeo ya cabía."""
+    def clips():
+        return [e for e in salida if e.get("fotogramas")]
+
+    def fijo():
+        return (INTRO_MS + OUTRO_MS + ACTO_MS * sum(e["nn"] in actos for e in salida)
+                + sum(e["dur"] for e in salida if not e.get("fotogramas")))
+
+    natural = fijo() + sum(e["dur"] for e in clips())
+    if natural <= objetivo_ms:
+        return None
+    quitados = 0
+    # Los hitos que se pueden quitar: los de la historia (la demo y el paseo del final se quedan enteros).
+    while True:
+        hitos = [e for e in clips() if not e.get("demo") and not e.get("paseo")]
+        if len(hitos) <= 2 or (objetivo_ms - fijo()) / len(clips()) >= ESCENA_MIN_MS:
+            break
+        # Fuera el hito del medio con menos novedades: el que menos cuenta.
+        medio = hitos[1:-1]
+        fuera = min(medio, key=lambda e: (len(e["nuevas"]) + len(e["cambiadas"]), -abs(hitos.index(e) - len(hitos) / 2)))
+        i = salida.index(fuera)
+        if fuera["nn"] in actos:
+            sigue = next((e for e in salida[i + 1:] if e.get("fotogramas")), None)
+            acto = actos.pop(fuera["nn"])
+            if sigue and sigue["nn"] not in actos:
+                actos[sigue["nn"]] = acto
+        # Lo que el hito quitado traía de nuevo lo cuenta el siguiente (y sus fotos, si ese no las trae).
+        sig = next((e for e in salida[i + 1:] if e.get("fotogramas")), None)
+        if sig:
+            sig["nuevas"] = list(dict.fromkeys(fuera["nuevas"] + sig["nuevas"]))
+            tiene = {f["key"] for f in sig["fichas"]}
+            sig["fichas"] = [f for f in fuera["fichas"] if f["key"] not in tiene] + sig["fichas"]
+        del salida[i]
+        quitados += 1
+    disponible = max(objetivo_ms - fijo(), ESCENA_MIN_MS * len(clips()))
+    total = sum(e["dur"] for e in clips())
+    factor = total / disponible
+    for e in clips():
+        if factor > 1:
+            e["dur"] = int(e["dur"] / factor)
+            e["vel"] = round(min(factor, VEL_MAX), 3)
+    return {"objetivo_s": round(objetivo_ms / 1000, 1), "natural_s": round(natural / 1000, 1), "quitados": quitados,
+            "vel": round(min(factor, VEL_MAX), 2) if factor > 1 else 1.0, "corta": factor > VEL_MAX}
+
+
 def duracion_ms(datos: dict) -> int:
     return datos["intro"] + sum(h["dur"] for h in datos["hitos"]) + datos["outro"]
+
+
+ORIGEN = "http://cronica.local"
+
+
+class _Disco:
+    """Sirve al reproductor los ficheros de `raiz` directamente desde el disco, sin socket: un servidor HTTP
+    local se atasca con decenas de fotos a la vez cuando un antivirus inspecciona el tráfico (Avast en Windows)."""
+
+    def __init__(self, page, raiz: Path):
+        self.url = ORIGEN
+        raiz = raiz.resolve()
+
+        def servir(route):
+            ruta = urllib.parse.unquote(urllib.parse.urlsplit(route.request.url).path).lstrip("/")
+            fichero = (raiz / ruta).resolve()
+            if fichero.is_file() and fichero.is_relative_to(raiz):
+                route.fulfill(path=str(fichero))
+            else:
+                route.fulfill(status=404, body="")
+
+        page.route(f"{ORIGEN}/**", servir)
+
+    def __exit__(self, *exc) -> None:
+        pass
 
 
 def _abrir(navegador, video: Path):
     datos = json.loads((video / "datos.json").read_text(encoding="utf-8"))
     rutas = [video] + [(video / h["clip"]).resolve() for h in datos["hitos"] if h.get("clip")]
     raiz = Path(os.path.commonpath([str(r.resolve()) for r in rutas]))
-    srv = Servidor(raiz)
-    page = navegador.new_page(viewport={"width": 1920, "height": 1080})
+    ancho, alto = datos.get("ancho", 1920), datos.get("alto", 1080)
+    page = navegador.new_page(viewport={"width": ancho, "height": alto})
+    srv = _Disco(page, raiz)
     page.goto(f"{srv.url}/{_rel(video.resolve(), raiz)}/reproductor.html")
     page.wait_for_function("window.ready === true", timeout=180_000)
     return srv, page

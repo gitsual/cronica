@@ -121,6 +121,38 @@
   #acto { opacity: 0; }
   #acto h1 { font-size: 150px; white-space: nowrap; }
   #acto p.frase { margin-top: 30px; font-size: 46px; max-width: 1320px; }
+  #portada { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+
+  /* En vertical (9:16, para el móvil) el diario va en una columna: cabecera, titular con el sello al lado,
+     la foto de portada encogida a lo ancho, las cifras a dos columnas, la hemeroteca y la tira abajo. */
+  html.vertical, .vertical body { width: 1080px; height: 1920px; }
+  .vertical #cabecera { left: 48px; right: 48px; top: 48px; }
+  .vertical #cabecera .fila { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "m m" "f c"; row-gap: 16px; }
+  .vertical #mancheta { grid-area: m; font-size: 64px; }
+  .vertical #fecha { grid-area: f; justify-self: start; } .vertical #chip { grid-area: c; }
+  .vertical #antetitulo { left: 48px; top: 216px; }
+  .vertical #rotulo { left: 48px; top: 252px; width: 780px; font-size: 60px; line-height: 1.04; white-space: normal; }
+  .vertical #sello { left: 846px; top: 206px; width: 190px; height: 190px; }
+  .vertical #portada { left: 48px; top: 420px; transform: scale(.76875); transform-origin: 0 0; }
+  .vertical #browser { left: 0; top: 0; }
+  .vertical #pie { left: 48px; top: 994px; width: 984px; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .vertical #nota { white-space: normal; max-height: 64px; }
+  .vertical #lado { left: 48px; top: 1096px; width: 984px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; }
+  .vertical #lado .seccion { grid-column: 1 / -1; }
+  .vertical #tl { top: 1858px; }
+  .vertical .card .perf { height: 100%; width: 56px; }
+  .vertical #introbg { left: 56px; right: 56px; }
+  .vertical .card .cuerpo { left: 110px; right: 110px; }
+  .vertical .card h1 { font-size: 150px; line-height: .92; white-space: normal; }
+  .vertical #acto h1 { font-size: 120px; white-space: normal; }
+  .vertical #acto p.frase { font-size: 42px; max-width: none; }
+  .vertical .card p { font-size: 38px; }
+  .vertical .card .sub { flex-wrap: wrap; gap: 16px 32px; }
+  .vertical #outro h1 { font-size: 100px; }
+  .vertical .card .big { flex-wrap: wrap; }
+  .vertical .card .big div { flex: 1 1 45%; padding: 18px 0 14px; border-right: 0; border-top: 1px solid var(--gastada); }
+  .vertical .card .big div + div { padding-left: 0; }
+  .vertical #fin { bottom: 110px; }
   #ext .dato { position: absolute; left: 0; right: 0; top: 660px; text-align: center; font: 500 15px var(--mono);
     letter-spacing: .14em; text-transform: uppercase; color: var(--gastada); }
 </style>
@@ -133,7 +165,7 @@
   </div>
   <div id="antetitulo"><b></b><em></em></div>
   <div id="rotulo"></div>
-  <div id="browser"><div id="shot"><img id="a" alt=""><img id="b" alt=""><div id="ext"></div></div></div>
+  <div id="portada"><div id="browser"><div id="shot"><img id="a" alt=""><img id="b" alt=""><div id="ext"></div></div></div></div>
   <div id="pie"><span id="url"></span><span id="nota"><span></span></span></div>
   <svg id="sello" viewBox="0 0 240 240" aria-hidden="true">
     <defs>
@@ -184,22 +216,32 @@ const lerp = (a, b, k) => a + (b - a) * k
 const tr = (k, v = {}) => (D.t?.[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => v[x] ?? '')
 const num = n => Math.round(n).toLocaleString(D?.locale || 'es-ES')
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-/** Reduce la letra hasta que el texto quepa en `ancho`. */
-function encajar (el, ancho) {
+/** Reduce la letra hasta que el texto quepa en `ancho` (y en `alto`, si el texto puede partirse en líneas). */
+function encajar (el, ancho, alto = Infinity) {
   el.style.fontSize = ''
   let px = parseFloat(getComputedStyle(el).fontSize)
-  while (el.scrollWidth > ancho && px > 20) { px -= 2; el.style.fontSize = `${px}px` }
+  while ((el.scrollWidth > ancho || el.scrollHeight > alto) && px > 20) { px -= 2; el.style.fontSize = `${px}px` }
 }
 const fotograma = (h, f) => `${h.clip}${String(clamp(f, 0, h.fotogramas - 1)).padStart(4, '0')}.jpg`
 /** Un giro distinto para cada golpe de sello, siempre el mismo para la misma escena. */
 const giro = i => [-9, 7, -13, 4, -6, 11, -3, 9][i % 8]
 
 let D, H = [], CIFRAS = [], ORDER = [], FIRST = {}, LATEST = [], FIN = 0
+/** Las medidas que dependen del lienzo: anchos en los que encajan los textos, el fondo de la hemeroteca y
+ *  el rectángulo que ocupa en el cierre. */
+const LIENZOS = {
+  horizontal: { mancheta: 640, rotulo: 1060, rotuloAlto: Infinity, titulo: 1320, tituloAlto: Infinity, fondo: 1000,
+    cierre: { x: 64, y: 45, w: 1792, h: 990 } },
+  vertical: { mancheta: 984, rotulo: 780, rotuloAlto: 132, titulo: 860, tituloAlto: 420, fondo: 1830,
+    cierre: { x: 48, y: 60, w: 984, h: 1770 } }
+}
+let L = LIENZOS.horizontal
 window.duration = 0
 
 async function load () {
   D = await (await fetch('datos.json')).json()
   H = D.hitos; CIFRAS = D.cifras
+  if (D.formato === 'vertical') { L = LIENZOS.vertical; document.documentElement.classList.add('vertical') }
   // El capítulo (repositorio) de cada escena: una extracción sigue en el del anterior.
   H.forEach((h, i) => { h.capitulo = h.cap ?? (i ? H[i - 1].capitulo : 0) })
   H.forEach((h, i) => h.fichas.forEach(t => { if (!(t.key in FIRST)) { FIRST[t.key] = i; ORDER.push(t.key) } }))
@@ -230,11 +272,11 @@ async function load () {
     `<div class="seccion hem">${tr('Hemeroteca')}</div>`
   // La hemeroteca empieza justo debajo de la última cifra.
   const hem = $('lado').querySelector('.hem')
-  const top = 236 + hem.offsetTop + hem.offsetHeight + 14
-  MOS.y = top; MOS.h = 1000 - top
+  const lado = $('lado'), top = lado.offsetTop + hem.offsetTop + hem.offsetHeight + 14
+  MOS.x = lado.offsetLeft; MOS.w = lado.offsetWidth; MOS.y = top; MOS.h = L.fondo - top
   const last = H.at(-1)
   $('mancheta').textContent = tr('Crónica de {p}', { p: D.proyecto })
-  encajar($('mancheta'), 640)
+  encajar($('mancheta'), L.mancheta)
   $('tl-a').textContent = H[0].fecha_corta; $('tl-b').textContent = last.fecha_corta
   $('introh').textContent = D.titulo
   $('introsub').textContent = D.rango
@@ -251,7 +293,7 @@ async function load () {
   const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
   H.filter(h => h.acto).forEach((h, j) => { h.acto.num = `${tr('Acto')} ${ROMANOS[j] ?? j + 1}` })
   $('outrobig').innerHTML = CIFRAS.filter(([k]) => last.cifras[k]).map(([k, l]) => `<div><strong>${num(last.cifras[k])}</strong>${l}</div>`).join('')
-  encajar($('introh'), 1320)
+  encajar($('introh'), L.titulo, L.tituloAlto)
   window.ready = true
 }
 const MOS = { x: 1392, y: 560, w: 464, h: 440 }
@@ -295,7 +337,7 @@ function seek (t) {
     if (acto.dataset.nn !== h.nn) {
       acto.dataset.nn = h.nn
       $('acton').textContent = h.acto.num; $('actoh').textContent = h.acto.titulo; $('actof').textContent = h.acto.frase
-      encajar($('actoh'), 1320)
+      encajar($('actoh'), L.titulo, L.tituloAlto)
     }
     acto.style.opacity = ease(enActo / 450) * clamp((pre - enActo) / 450)
     $('actoh').style.transform = `translateY(${lerp(30, 0, ease(enActo / 700))}px)`
@@ -313,7 +355,7 @@ function seek (t) {
   $('fecha').textContent = h.fecha_larga
   const numeros = H.filter(x => !x.demo).length
   $('chip').textContent = h.demo ? tr('Edición en directo') : tr('Núm. {i} de {n}', { i: i + 1, n: numeros }) + (h.sha ? ` · ${h.sha}` : '')
-  const r = $('rotulo'); if (r.dataset.nn !== h.nn) { r.dataset.nn = h.nn; r.textContent = h.rotulo; encajar(r, 1060) }
+  const r = $('rotulo'); if (r.dataset.nn !== h.nn) { r.dataset.nn = h.nn; r.textContent = h.rotulo; encajar(r, L.rotulo, L.rotuloAlto) }
   const nota = $('nota').firstChild
   if (nota.dataset.nn !== h.nn) { nota.dataset.nn = h.nn; nota.textContent = h.nota || '' }
   const kr = ease(local / 450)
@@ -337,7 +379,7 @@ function seek (t) {
     if (prev && prev.fotogramas && local < TRANS) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
     $('a').style.opacity = prev && prev.fotogramas && local < TRANS ? 1 : 0; $('b').style.opacity = 0
   } else {
-    const f = Math.floor(local * D.fps_clip / 1000)
+    const f = Math.floor(local * D.fps_clip * (h.vel || 1) / 1000)  // vel: el clip acelerado para caber en la duración
     espera.push(poner($('b'), fotograma(h, f)))
     const conA = prev && prev.fotogramas && local < TRANS
     if (conA) espera.push(poner($('a'), fotograma(prev, prev.fotogramas - 1)))
@@ -360,9 +402,9 @@ function seek (t) {
   const delCap = (key, j) => Number(key.split(':')[0]) === H[Math.max(0, j)].capitulo
   const visible = ORDER.filter(key => FIRST[key] <= i && delCap(key, i))
   const before = ORDER.filter(key => FIRST[key] <= i - 1 && delCap(key, i - 1) && delCap(key, i))
-  const W = lerp(MOS.w, 1792, out), Hh = lerp(MOS.h, 990, out)
+  const C = L.cierre, W = lerp(MOS.w, C.w, out), Hh = lerp(MOS.h, C.h, out)
   const mosaic = $('mosaic')
-  mosaic.style.left = `${lerp(MOS.x, 64, out)}px`; mosaic.style.top = `${lerp(MOS.y, 45, out)}px`
+  mosaic.style.left = `${lerp(MOS.x, C.x, out)}px`; mosaic.style.top = `${lerp(MOS.y, C.y, out)}px`
   mosaic.style.width = `${W}px`; mosaic.style.height = `${Hh}px`
   mosaic.style.transform = outroT > 0 ? `scale(${1 + .03 * clamp(outroT / D.outro)})` : ''
   const now = grid(visible.length, W, Hh), then = grid(before.length, MOS.w, MOS.h)

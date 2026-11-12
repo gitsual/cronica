@@ -189,6 +189,10 @@ frame, the figures on the right and the screens piling up beside it.
   <a href="assets/video/garden-classic.mp4"><img src="assets/gifs/classic.gif" alt="The classic look: a dark background, the headline, the app in a browser frame, the figures and a column of screens" width="100%"></a>
 </p>
 
+With `--format vertical` the newspaper is set in a single column for a phone: masthead, headline with the stamp beside
+it, the front-page photo across, the figures in two columns, the archive and the strip below. `--duration 60` fits
+the whole film into a minute. Both are also in the settings window.
+
 A look is a single HTML page that reads `datos.json` and exposes `seek(t)`: `--look my-page.html` uses yours. Every
 word and date it shows arrives already translated in `datos.json`, so your own look speaks every language cronica
 does. The two that ship are in [`cronica/reproductor/esteticas/`](cronica/reproductor/esteticas). The typefaces
@@ -333,6 +337,8 @@ Headlines that come from your pull request titles stay as they were written. The
 | `--music console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
 | `--look newspaper\|classic\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
 | `--seconds 6` | seconds of app in use per issue, at most |
+| `--duration 60` | the whole film runs this long at most: clips play faster (up to 2×) and, if that is not enough, the issues in the middle with the least news are left out |
+| `--format horizontal\|vertical` | 16:9 (default) or 9:16 for phones; vertical is laid out as a one-column front page (newspaper look only) |
 | `--hide lines` | a figure that does not appear in the film (`components`, `screens`, `stories`, `files`, `lines`, `commits`, `authors`; repeatable) |
 | `--name folder=name` | the name a repository appears under (if it was renamed) |
 | `--also other-folder` | a repository that does not appear on screen but counts in the figures |

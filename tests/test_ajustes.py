@@ -126,3 +126,10 @@ def test_los_titulares_usan_el_modelo_de_los_ajustes(falso):
     finally:
         _Falso.do_POST = _Falso.do_POST_original
     assert r["rotulos"] == {"01": "Uno"} and r["titulo"] == "T"
+
+
+def test_duracion_y_formato():
+    s = ajustes.guardar({"duration": "60", "format": "vertical", "look": "clasica"})
+    assert (s["duration"], s["format"], s["look"]) == (60.0, "vertical", "diario")   # la clásica no sabe ser vertical
+    s = ajustes.guardar({"duration": -5, "format": "cuadrado"})
+    assert (s["duration"], s["format"]) == (0.0, "horizontal")
