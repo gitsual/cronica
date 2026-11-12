@@ -60,7 +60,7 @@ def test_lo_que_no_tiene_sentido_no_se_guarda():
     s = ajustes.guardar({"lang": "fr", "ai": {"backend": "skynet", "model": " qwen3 "}, "music": "rock",
                          "max_milestones": "9999", "seconds": "x"})
     assert s["lang"] == "en" and s["ai"]["backend"] == "off" and s["ai"]["model"] == "qwen3"
-    assert s["music"] == "taller" and s["max_milestones"] == 200
+    assert s["music"] == "ascensor" and s["max_milestones"] == 200
     assert ajustes.leer() == s
 
 

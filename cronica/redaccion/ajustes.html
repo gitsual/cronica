@@ -117,12 +117,15 @@
   <div class="campos" style="margin-top:0">
     <label data-t="musica"></label>
     <div class="opciones">
+      <label class="opcion"><input type="radio" name="music" value="ascensor"><b data-t="ascensor"></b><small data-t="ascensor_p"></small></label>
+      <label class="opcion"><input type="radio" name="music" value="vals"><b data-t="vals"></b><small data-t="vals_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="taller"><b data-t="taller"></b><small data-t="taller_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="cuento"><b data-t="cuento"></b><small data-t="cuento_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="consola"><b data-t="consola"></b><small data-t="consola_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="noticiario"><b data-t="noticiario"></b><small data-t="noticiario_p"></small></label>
       <label class="opcion"><input type="radio" name="music" value="ambiente"><b data-t="ambiente"></b><small data-t="ambiente_p"></small></label>
     </div>
+    <div class="opciones" id="pistas"></div>
     <label data-t="estetica"></label>
     <div class="opciones">
       <label class="opcion"><input type="radio" name="look" value="diario"><b data-t="diario"></b><small data-t="diario_p"></small></label>
@@ -160,8 +163,11 @@ const T = {
     openai: 'OpenAI-compatible server', openai_p: 'LM Studio, llama-server, vLLM, LiteLLM… on this machine or on your network.',
     servidor: 'Server', clave: 'API key', modelo: 'Model', buscar: 'Find models', probar: 'Test',
     pelicula: 'The film', pelicula_p: 'How it sounds, how it looks, and how long it is.',
-    musica: 'Music', taller: 'Workshop', taller_p: 'A storybook tune from an inventor’s workshop: bassoon, accordion, clarinet and glockenspiel.',
-    cuento: 'Fable', cuento_p: 'Night and mystery: a music box going round, a harp, low strings and a flute.',
+    musica: 'Music', ascensor: 'Lobby', ascensor_p: 'Bossa for a lobby, with a console menu, a café accordion and an inventor’s workshop taking turns on top. Real instruments.',
+    vals: 'Waltz', vals_p: 'A café waltz in D minor: accordion, pizzicato oom-pah-pah.',
+    taller: 'Workshop', taller_p: 'An inventor’s workshop: bassoon, accordion on the off-beat, clarinet and glockenspiel.',
+    cuento: 'Fable', cuento_p: 'Night and mystery: harp and music box going round, cellos, flute and oboe.',
+    pista: 'Your track, fitted to each film bar by bar.', pistas_vacio: t => `Tracks of your own go in ${t}`,
     consola: 'Console', consola_p: 'A cheerful swing tune, like a console menu.',
     noticiario: 'Newsreel', noticiario_p: 'A cinema newsreel march, brass and snare.',
     ambiente: 'Ambient', ambiente_p: 'A pad with no melody, a chord per scene.',
@@ -186,8 +192,11 @@ const T = {
     openai: 'Servidor compatible con OpenAI', openai_p: 'LM Studio, llama-server, vLLM, LiteLLM… en esta máquina o en tu red.',
     servidor: 'Servidor', clave: 'Clave de API', modelo: 'Modelo', buscar: 'Buscar modelos', probar: 'Probar',
     pelicula: 'El vídeo', pelicula_p: 'Cómo suena, cómo se ve y cuánto dura.',
-    musica: 'Música', taller: 'Taller', taller_p: 'Una canción de cuento, del taller de un inventor: fagot, acordeón, clarinete y glockenspiel.',
-    cuento: 'Cuento', cuento_p: 'De noche y con misterio: una caja de música que da vueltas, arpa, cuerdas graves y una flauta.',
+    musica: 'Música', ascensor: 'Ascensor', ascensor_p: 'Bossa de vestíbulo y, por turnos encima, un menú de consola, un acordeón de café y un taller de inventor. Instrumentos de verdad.',
+    vals: 'Vals', vals_p: 'Un vals de café en re menor: acordeón y «um-pa-pa» en pizzicato.',
+    taller: 'Taller', taller_p: 'El taller de un inventor: fagot, acordeón a contratiempo, clarinete y glockenspiel.',
+    cuento: 'Cuento', cuento_p: 'De noche y con misterio: arpa y caja de música dando vueltas, chelos, flauta y oboe.',
+    pista: 'Tu pista, ajustada a cada vídeo por compases.', pistas_vacio: t => `Las pistas propias van en ${t}`,
     consola: 'Consola', consola_p: 'Una canción alegre con swing, como un menú de consola.',
     noticiario: 'Noticiario', noticiario_p: 'Una marcha de noticiario de cine, metales y caja.',
     ambiente: 'Ambiente', ambiente_p: 'Un fondo sin melodía, un acorde por escena.',
@@ -217,6 +226,7 @@ function traducir () {
   const hoy = new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   $('version').innerHTML = `cronica ${version}<br>${hoy}`
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t[el.dataset.t] })
+  document.querySelectorAll('[data-carpeta]').forEach(el => { el.textContent = t.pistas_vacio(el.dataset.carpeta) })
   $('ruta').textContent = `${t.archivo} · ${ruta}`
   $('model-libre').placeholder = t.escribir
   const primera = $('model').querySelector('option[value=""]')
@@ -294,6 +304,7 @@ async function cargar () {
   const d = await api('/api/settings')
   const s = d.settings
   guardado = s; ruta = d.path; lang = s.lang; version = d.version
+  ponerPistas(d.tracks || [], d.tracks_folder || '')
   marcar('lang', s.lang); marcar('backend', s.ai.backend); marcar('music', s.music); marcar('look', s.look)
   $('url').value = s.ai.url; $('key').value = s.ai.key
   $('max').value = s.max_milestones; $('seconds').value = s.seconds
@@ -301,6 +312,26 @@ async function cargar () {
   ponerModelos([], s.ai.model)
   traducir(); verIa()
   if (s.ai.backend !== 'off') buscarModelos()
+}
+
+/** Las pistas propias instaladas (por ejemplo, de Suno), como una opción más de música. */
+function ponerPistas (pistas, carpeta) {
+  const caja = $('pistas')
+  caja.innerHTML = ''
+  for (const nombre of pistas) {
+    const l = document.createElement('label')
+    l.className = 'opcion'
+    l.innerHTML = '<input type="radio" name="music"><b></b><small data-t="pista"></small>'
+    l.querySelector('input').value = nombre
+    l.querySelector('b').textContent = nombre
+    caja.appendChild(l)
+  }
+  if (!pistas.length && carpeta) {
+    const p = document.createElement('small')
+    p.className = 'ayuda'
+    p.dataset.carpeta = carpeta
+    caja.appendChild(p)
+  }
 }
 
 /** En vertical solo vale el diario: la clásica se apaga mientras tanto. */

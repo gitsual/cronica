@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cronica"
-version = "0.5.0"
+version = "0.6.0"
 description = "The film of how the interface of a project evolved, read from its git history (English and Spanish)"
 requires-python = ">=3.10"
 dependencies = ["playwright>=1.40", "numpy>=1.24", "pillow>=10"]
@@ -16,7 +16,8 @@ dev = ["pytest>=8"]
 cronica = "cronica.cli:main"
 
 [tool.setuptools]
-packages = ["cronica"]
+packages = ["cronica", "cronica.orquesta"]
 
 [tool.setuptools.package-data]
-cronica = ["reproductor/esteticas/*.html", "reproductor/fonts/*", "redaccion/*.html"]
+cronica = ["reproductor/esteticas/*.html", "reproductor/fonts/*", "redaccion/*.html", "orquesta/banco.ogg",
+           "orquesta/banco.json", "orquesta/LICENCIAS.txt"]

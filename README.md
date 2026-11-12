@@ -13,7 +13,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <p><strong>Give it the folder of a project with an interface.<br>It hands back the film of how that interface grew: one front page per pull request.</strong></p>
 
 <p>
-  <img alt="version 0.5.0" src="https://img.shields.io/badge/version-0.5.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="version 0.6.0" src="https://img.shields.io/badge/version-0.6.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="49 tests" src="https://img.shields.io/badge/tests-49-191612?style=for-the-badge&labelColor=191612&color=5A5247">
@@ -267,17 +267,31 @@ history of three hundred commits it is the thirty that changed the interface tha
 The music is written by the program for each film, so there are no rights to clear: its length is the film's, and
 every scene change lands on it.
 
-<p align="center"><img src="assets/musica.png" alt="The waveforms of the older styles: console, a swing tune with a melody; newsreel, a march with clear beats; ambient, a continuous pad" width="100%"></p>
+The first four styles are played by **real recorded instruments**: a small sampler with 215 samples in 6 MB, from
+[VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) (CC0) and FluidR3_GM (MIT), credited in
+[`cronica/orquesta/LICENCIAS.txt`](cronica/orquesta/LICENCIAS.txt). The harmony is jazz harmony: ninth and
+thirteenth chords voiced without the root, voice-led so each chord moves as little as possible to the next
+(dynamic programming over the voicings, after Tymoczko), with a counter-line of guide tones against the melody
+and a bass that walks into every chord by a semitone. A scene change is the chord that is sounding, arpeggiated
+on vibraphone and glockenspiel.
 
 | | Listen (40 s) |
 |---|---|
-| `--music workshop` (default): a storybook tune from an inventor's workshop, in the manner of Tomohito Nishiura's music for Dark Chronicle. A♭ major at 100 bpm: a bassoon bouncing on every beat over a pizzicato double bass, musette accordion, a clarinet with grace notes and chromatic turns, a glockenspiel answering every phrase, a woodblock | [musica-taller.mp3](https://github.com/gitsual/cronica/releases/download/v0.5.0/musica-taller.mp3) |
-| `--music fable`: night and mystery, in the manner of «The Spirit King» from Dark Cloud. C minor at 117 bpm: a music box going round the chord in eighth notes, a harp, low strings holding the pedal two bars at a time, a flute on every other round, bells on every scene; warm and dark | [musica-cuento.mp3](https://github.com/gitsual/cronica/releases/download/v0.5.0/musica-cuento.mp3) |
-| `--music console`: a cheerful parlour tune with swing, C major at 116 bpm, intro and A A B A, vibraphone melody, electric piano on the off-beat, bass, light percussion and a sparkle on every scene | [musica-consola.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) |
-| `--music newsreel`: a cinema newsreel march in B♭ at 128 bpm, fanfare, brass melody, tuba, snare rolls and a cymbal on every part; made for the newspaper look | [musica-noticiario.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-noticiario.mp3) |
-| `--music ambient`: a pad with no melody that changes chord with every scene | [musica-ambiente.mp3](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-ambiente.mp3) |
-| `--music track.mp3` · `--no-music` | your own track, or silence |
+| `--music lobby` (default): bossa for a lobby as the frame (nylon guitar, Rhodes, upright bass, soft rim and hi-hat) and, taking turns on top, a vibraphone in the manner of a console menu, a café accordion answered by a clarinet, a clarinet with bassoon and pizzicato a third below, and flute with vibraphone over strings | [musica-ascensor.mp3](https://github.com/gitsual/cronica/releases/download/v0.6.0/musica-ascensor.mp3) |
+| `--music waltz`: a café waltz in D minor, accordion over a pizzicato oom-pah-pah | [musica-vals.mp3](https://github.com/gitsual/cronica/releases/download/v0.6.0/musica-vals.mp3) |
+| `--music workshop`: an inventor's workshop in A♭, bassoon and double bass bouncing, accordion on the off-beat, clarinet, glockenspiel | [musica-taller.mp3](https://github.com/gitsual/cronica/releases/download/v0.6.0/musica-taller.mp3) |
+| `--music fable`: night and mystery in C minor, harp and music box going round, cellos holding the pedal, flute and oboe | [musica-cuento.mp3](https://github.com/gitsual/cronica/releases/download/v0.6.0/musica-cuento.mp3) |
+| `--music console`, `newsreel`, `ambient`: the earlier synthesised styles (a swing tune, a newsreel march, a pad) | [consola](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-consola.mp3) · [noticiario](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-noticiario.mp3) · [ambiente](https://github.com/gitsual/cronica/releases/download/v0.3.0/musica-ambiente.mp3) |
+| `--music track.mp3` · `--music "Track name"` · `--no-music` | your own track, or silence |
 
+**Your own track** is fitted to the film bar by bar, never cut mid-bar. Its beat grid is measured (or read from
+`track.json`: `{"negra": seconds per beat, "uno": first downbeat}`), and its bars are compared by their harmony
+(chroma) and loudness. A shorter film keeps the real opening and the real ending and skips a stretch of the middle,
+jumping between two bars that sound alike and keep their place in the four-bar phrase; a longer one repeats a
+stretch of 16 to 32 bars in a loop until the ending is due. What is left over (at most three bars) is absorbed by
+playing the whole track up to 6 % slower, pitch unchanged. Each scene change gets a triangle on the nearest beat.
+Tracks dropped in the `pistas` folder next to the settings (`%APPDATA%\cronica\pistas` on Windows) appear by
+name in the newsroom and work as `--music "Name"`. Mind the rights of what you put there.
 ---
 
 <a id="the-newsroom-settings"></a>
@@ -336,7 +350,7 @@ Headlines that come from your pull request titles stay as they were written. The
 | `--branch develop` | another branch (also `origin/develop`) |
 | `--mode storybook\|web\|static` | force what is photographed |
 | `--ai [model]` | headlines written by the model chosen in the settings; without one, Ollama on `127.0.0.1:11434` (`CRONICA_LLM=http://…/v1` points it at an OpenAI-compatible server) |
-| `--music workshop\|fable\|console\|newsreel\|ambient\|track.mp3` · `--no-music` | [the music](#music) |
+| `--music lobby\|waltz\|workshop\|fable\|console\|newsreel\|ambient\|"Track name"\|track.mp3` · `--no-music` | [the music](#music) |
 | `--look newspaper\|classic\|page.html` | [the look](#how-it-looks): the newspaper (default), the classic one, or your own player |
 | `--seconds 6` | seconds of app in use per issue, at most |
 | `--duration 60` | the whole film runs this long at most: clips play faster (up to 2×) and, if that is not enough, the issues in the middle with the least news are left out |
@@ -459,9 +473,9 @@ through corepack).
 
 ## Verification
 
-| Suite | Command | Result for 0.5.0 |
+| Suite | Command | Result for 0.6.0 |
 |---|---|---|
-| Unit and end to end | `python -m pytest -q` | 59 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, the five music styles, and the settings window against a fake model server |
+| Unit and end to end | `python -m pytest -q` | 67 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, every music style (the orchestra included), a track of your own fitted bar by bar, and the settings window against a fake model server |
 | The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
 | The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 
