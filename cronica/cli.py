@@ -67,7 +67,8 @@ def _abrir_chromium(p):
 
 
 # Los nombres en inglés son los de la documentación; los de antes, en español, siguen valiendo.
-MUSICAS = {"workshop": "taller", "fable": "cuento", "console": "consola", "newsreel": "noticiario", "ambient": "ambiente"}
+MUSICAS = {"lobby": "ascensor", "waltz": "vals", "workshop": "taller", "fable": "cuento", "console": "consola",
+           "newsreel": "noticiario", "ambient": "ambiente"}
 LOOKS = {"newspaper": "diario", "classic": "clasica"}
 FORMATOS = {"landscape": "horizontal", "portrait": "vertical"}
 MODOS = {"static": "estatico"}
@@ -111,7 +112,8 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--ai", "--ia", dest="ia", nargs="?", const="", metavar="MODEL",
                     help=_("rótulos escritos por un modelo (el de los ajustes; si no, Ollama en :11434 o CRONICA_LLM=http://…/v1)"))
     ap.add_argument("--music", "--musica", dest="musica", metavar="STYLE|FILE", default=conf["music"],
-                    help=_("la música: un estilo generado (workshop, por defecto; fable; console; newsreel; ambient) o un fichero de audio propio"))
+                    help=_("la música: un estilo (lobby, por defecto; waltz; workshop; fable; console; newsreel; ambient), "
+                           "una pista instalada por su nombre o un fichero de audio propio, que se ajusta por compases"))
     ap.add_argument("--no-music", "--sin-musica", dest="sin_musica", action="store_true", help=_("sin música"))
     ap.add_argument("--seconds", "--segundos", dest="segundos", type=float, default=conf["seconds"],
                     help=_("segundos como mucho de app en uso por hito (6)"))
@@ -158,8 +160,10 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
         ap.error(_("--format vertical: de momento solo con la estética newspaper"))
     if args.duracion < 0:
         ap.error(_("--duration: los segundos no pueden ser negativos"))
+    if args.musica in musica.pistas():
+        args.musica = str(musica.pistas()[args.musica])
     if args.musica not in musica.ESTILOS and not Path(args.musica).is_file():
-        ap.error(_("--music: «{e}» no es workshop, fable, console, newsreel ni ambient ni un fichero que exista", e=args.musica))
+        ap.error(_("--music: «{e}» no es un estilo, ni una pista instalada, ni un fichero que exista", e=args.musica))
     validas = set(CIFRAS) | set(CIFRAS.values())
     for c in args.ocultar:
         if c not in validas:
@@ -329,13 +333,14 @@ def _ejecutar(args: argparse.Namespace) -> int:
             return 0
 
         audio = None
+        cambios = [h["inicio"] / 1000 for h in video["hitos"][1:]]
         if args.sin_musica:
             pass
         elif args.musica not in musica.ESTILOS:
-            audio = Path(args.musica).resolve()
+            audio = musica.ajustar_pista(Path(args.musica).resolve(), trabajo / "musica.wav", duracion / 1000, cambios,
+                                         ffmpeg)
         else:
-            audio = musica.generar(trabajo / "musica.wav", duracion / 1000, [h["inicio"] / 1000 for h in video["hitos"][1:]],
-                                   args.musica)
+            audio = musica.generar(trabajo / "musica.wav", duracion / 1000, cambios, args.musica, ffmpeg)
         print(_("  {n} escenas, {s} s de vídeo", n=len(video["hitos"]), s=f"{duracion / 1000:.0f}"))
         montaje.renderizar(navegador, trabajo / "video", salida, args.fps, audio, ffmpeg)
         navegador.close()

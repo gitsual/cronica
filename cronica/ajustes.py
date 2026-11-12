@@ -24,7 +24,7 @@ OLLAMA, OPENAI = "http://127.0.0.1:11434", "http://127.0.0.1:1234/v1"
 DEFECTO = {
     "lang": "en",
     "ai": {"backend": "off", "url": "", "model": "", "key": ""},
-    "music": "taller",
+    "music": "ascensor",
     "look": "diario",
     "max_milestones": 30,
     "seconds": 6.0,
@@ -55,7 +55,8 @@ def _limpiar(d: dict) -> dict:
     for k in ("url", "model", "key"):
         if isinstance(ai.get(k), str):
             salida["ai"][k] = ai[k].strip()
-    if d.get("music") in musica.ESTILOS or (isinstance(d.get("music"), str) and Path(d["music"]).is_file()):
+    if d.get("music") in musica.ESTILOS or d.get("music") in musica.pistas() or (
+            isinstance(d.get("music"), str) and Path(d["music"]).is_file()):
         salida["music"] = d["music"]
     if d.get("look") in montaje.ESTETICAS or (isinstance(d.get("look"), str) and Path(d["look"]).is_file()):
         salida["look"] = d["look"]
@@ -156,7 +157,8 @@ class _Redaccion(http.server.BaseHTTPRequestHandler):
         if self.path == "/api/settings":
             from . import __version__, musica, montaje
             return self._json({"settings": leer(), "path": str(ruta()), "version": __version__,
-                               "music": list(musica.ESTILOS), "looks": list(montaje.ESTETICAS)})
+                               "music": list(musica.ESTILOS), "tracks": list(musica.pistas()),
+                               "tracks_folder": str(musica.carpeta_pistas()), "looks": list(montaje.ESTETICAS)})
         self.send_error(404)
 
     def do_POST(self):

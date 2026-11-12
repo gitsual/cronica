@@ -1,27 +1,28 @@
-"""Música de fondo generada, en cinco estilos (--musica <estilo>):
+"""La música de fondo, escrita para cada vídeo: dura lo que dura y cada cambio de escena cae en ella.
 
-- taller (por defecto): una canción de taller de inventor, de cuento, a lo Tomohito Nishiura (Dark Chronicle).
-  La bemol a 100 bpm: fagot saltando, acordeón musette, clarinete con apoyaturas, glockenspiel y caja china.
-- cuento: de noche y con misterio, a lo «The Spirit King» (Dark Cloud). Do menor a 117 bpm: caja de música
-  en corcheas, arpa, cuerdas graves en pedal, una flauta y campanas en cada cambio de escena.
-- consola: una canción alegre de salón, en la línea de los menús de consola. Do mayor con
-  swing a 116 bpm, intro + A A B A en bucle: vibráfono con la melodía, piano eléctrico a contratiempo,
-  bajo, percusión suave y un destello muy flojo en cada cambio de escena.
-- noticiario: una marcha de noticiario de cine, a juego con la estética del diario. Si bemol a 128 bpm,
-  metales con la melodía, tuba y acordes en «um-pa», caja, bombo y platillo al empezar cada parte.
-- ambiente: el pad de antes, sin melodía, que cambia de acorde con cada escena.
+Con la orquesta (instrumentos grabados de verdad, cronica/orquesta):
 
-Todo sale de senos y ruido (nada con derechos). Si se pasa --musica con un fichero, se usa ese.
+- ascensor (por defecto): bossa de ascensor como marco, con los colores de un menú de consola, de un café de
+  acordeón y de un taller de inventor entrando por secciones. Armonía de novenas con las voces bien llevadas.
+- vals: un vals de café en re menor, acordeón y «um-pa-pa» de contrabajo y violines en pizzicato.
+- taller: la bemol a 104 bpm, fagot y contrabajo saltando, acordeón a contratiempo, clarinete y glockenspiel.
+- cuento: de noche, arpa y caja de música en ostinato, chelos, flauta y oboe.
+
+Con síntesis (senos y ruido), los de antes: consola, noticiario y ambiente.
+
+Si se pasa --music con un fichero, se ajusta al vídeo por compases (ajustar_pista).
 """
 from __future__ import annotations
 
+import subprocess
 import wave
 from pathlib import Path
 
 import numpy as np
 
 SR = 44100
-ESTILOS = ("taller", "cuento", "consola", "noticiario", "ambiente")
+ESTILOS = ("ascensor", "vals", "taller", "cuento", "consola", "noticiario", "ambiente")
+ORQUESTA = ("ascensor", "vals", "taller", "cuento")
 
 
 def _hz(midi: float) -> float:
@@ -331,232 +332,215 @@ def _ambiente(m: _Mezcla, duracion_s: float, cambios_s: list[float]) -> None:
     m.sala(((0.37, 0.32), (0.61, 0.2), (0.93, 0.12)))
 
 
-# ---------------------------------------------------------------- taller y cuento: instrumentos de cuento
-
-def _cuerda(f: float, dur: float, brillo: float = 0.5, semilla: int = 0, caida: float = 0.996) -> np.ndarray:
-    """Una cuerda pulsada (Karplus-Strong): pizzicato con brillo bajo, arpa con brillo alto."""
-    periodo = max(2, int(round(SR / f)))
-    n = int(dur * SR)
-    ruido = np.random.default_rng(semilla).uniform(-1, 1, periodo)
-    for _ in range(int((1 - brillo) * 6)):
-        ruido = 0.5 * (ruido + np.roll(ruido, 1))
-    bloques = [ruido - ruido.mean()]
-    anterior_ultimo = 0.0
-    while len(bloques) * periodo < n:
-        b = bloques[-1]
-        nuevo = caida * 0.5 * (b + np.concatenate(([anterior_ultimo], b[:-1])))
-        anterior_ultimo = b[-1]
-        bloques.append(nuevo)
-    voz = np.concatenate(bloques)[:n]
-    return voz * _env(n, 0.001, 0.0, 0.05) / max(1e-9, np.abs(voz).max())
-
-
-def _lengueta(f: float, dur: float, armonicos: tuple[float, ...], ataque: float = 0.03,
-              vibrato: float = 0.0, desafine: float = 0.0, caida: float = 0.4) -> np.ndarray:
-    """Un instrumento de lengüeta o de soplo a base de armónicos; con desafine, dos voces (acordeón musette)."""
-    n = int((dur + 0.08) * SR)
-    t = np.arange(n) / SR
-    vib = 1 + vibrato * np.sin(2 * np.pi * 5.3 * t) * np.clip((t - 0.18) / 0.25, 0, 1)
-    voz = np.zeros(n)
-    for d in ((1 - desafine, 1 + desafine) if desafine else (1.0,)):
-        fase = 2 * np.pi * f * d * np.cumsum(vib) / SR
-        voz += sum(a * np.sin((k + 1) * fase) for k, a in enumerate(armonicos) if a and (k + 1) * f * d < SR / 2.2)
-    return voz * _env(n, ataque, caida, 0.07)
-
-
-CLARINETE = (1.0, 0.04, 0.45, 0.03, 0.22, 0.02, 0.1, 0.0, 0.05)
-ACORDEON = (1.0, 0.7, 0.55, 0.42, 0.3, 0.22, 0.15, 0.1)
-FAGOT = (0.55, 1.0, 0.75, 0.45, 0.28, 0.16, 0.08)
-FLAUTA = (1.0, 0.22, 0.07, 0.03)
-CUERDAS = tuple(1 / k for k in range(1, 11))
-
-
-def _caja_musica(f: float) -> np.ndarray:
-    """Una púa de caja de música: fundamental limpia y parciales altos que se apagan enseguida."""
-    n = int(1.6 * SR)
-    t = np.arange(n) / SR
-    voz = (np.sin(2 * np.pi * f * t) * np.exp(-t * 2.4) + 0.35 * np.sin(2 * np.pi * f * 3.01 * t) * np.exp(-t * 9)
-           + 0.12 * np.sin(2 * np.pi * f * 5.43 * t) * np.exp(-t * 18))
-    return voz * _env(n, 0.002, 0.0, 0.2)
-
-
-def _campana(f: float, dur: float = 2.5) -> np.ndarray:
-    n = int(dur * SR)
-    t = np.arange(n) / SR
-    parciales = ((1.0, 1.0, 1.2), (2.0, 0.5, 2.0), (2.4, 0.35, 2.6), (3.0, 0.25, 3.5), (4.2, 0.15, 5.0))
-    return sum(a * np.sin(2 * np.pi * f * r * t) * np.exp(-t * c) for r, a, c in parciales) * _env(n, 0.002, 0, 0.3)
-
-
-def _caja_china(semilla: int = 0) -> np.ndarray:
-    n = int(0.09 * SR)
-    t = np.arange(n) / SR
-    golpe = (np.sin(2 * np.pi * 1180 * t) + 0.4 * np.sin(2 * np.pi * 2650 * t)) * np.exp(-t * 55)
-    return golpe + 0.1 * _ruido(0.09, 60, semilla)[:n]
-
-
-def _filtrar(m: _Mezcla, corte_hz: float) -> None:
-    """Un paso bajo suave sobre toda la mezcla (en frecuencia): el sonido cálido y apagado de la sala."""
-    for canal in (m.izq, m.der):
-        espectro = np.fft.rfft(canal)
-        f = np.fft.rfftfreq(len(canal), 1 / SR)
-        espectro *= 1 / np.sqrt(1 + (f / corte_hz) ** 4)
-        canal[:] = np.fft.irfft(espectro, len(canal))
-
-
-# ---------------------------------------------------------------- taller
-
-# Una canción de taller de inventor, de cuento: La bemol mayor a 100 bpm, fagot saltando en cada pulso,
-# acordeón musette con los acordes, clarinete con la melodía (cromatismos y apoyaturas), glockenspiel que
-# contesta al final de cada frase, caja china y pizzicato a contratiempo.
-TALLER_ACORDES = {
-    "Ab": (44, (0, 4, 7)), "Fm": (41, (0, 3, 7)), "Db": (49, (0, 4, 7)), "Eb7": (39, (0, 4, 7, 10)),
-    "C7": (48, (0, 4, 7, 10)), "Bbm7": (46, (0, 3, 7, 10)), "Dbm": (49, (0, 3, 7)), "F7": (41, (0, 4, 7, 10)),
-    "Ab/C": (48, (-4, 0, 3)),
-}
-TALLER_A = [
-    (["Ab"], [(0, 72, 1), (1, 75, 1), (2, 80, 2), (4, 79, 1), (5, 80, 1), (6, 77, 2)]),
-    (["Fm"], [(0, 77, 1), (1, 76, 1), (2, 77, 1), (3, 80, 1), (4, 84, 3), (7, 82, 1)]),
-    (["Db"], [(0, 80, 2), (2, 77, 1), (3, 73, 1), (4, 77, 2), (6, 80, 1), (7, 79, 1)]),
-    (["Eb7"], [(0, 79, 3), (3, 75, 1), (4, 73, 2), (6, 70, 2)]),
-    (["Ab"], [(0, 72, 1), (1, 75, 1), (2, 80, 2), (4, 84, 1), (5, 82, 1), (6, 80, 2)]),
-    (["C7"], [(0, 79, 1), (1, 78, 1), (2, 79, 1), (3, 76, 1), (4, 72, 2), (6, 70, 1), (7, 72, 1)]),
-    (["Fm"], [(0, 73, 1), (1, 72, 1), (2, 73, 1), (3, 77, 1), (4, 80, 2), (6, 77, 2)]),
-    (["Bbm7", "Eb7"], [(0, 75, 2), (2, 73, 1), (3, 72, 1), (4, 70, 2), (6, 67, 1), (7, 70, 1)]),
-]
-TALLER_B = [
-    (["Db"], [(0, 77, 3), (3, 80, 1), (4, 85, 4)]),
-    (["Dbm"], [(0, 84, 2), (2, 80, 2), (4, 76, 4)]),
-    (["Ab/C"], [(0, 75, 1), (1, 77, 1), (2, 80, 2), (4, 79, 1), (5, 80, 1), (6, 84, 2)]),
-    (["F7"], [(0, 81, 3), (3, 80, 1), (4, 77, 2), (6, 75, 2)]),
-    (["Bbm7"], [(0, 73, 1), (1, 77, 1), (2, 80, 2), (4, 82, 2), (6, 80, 2)]),
-    (["Eb7"], [(0, 79, 2), (2, 82, 2), (4, 85, 3), (7, 84, 1)]),
-    (["Ab"], [(0, 84, 4), (4, 80, 2), (6, 75, 2)]),
-    (["Eb7"], [(0, 79, 1), (1, 80, 1), (2, 79, 1), (3, 77, 1), (4, 75, 2), (6, 74, 1), (7, 75, 1)]),
-]
-
-
-def _taller(m: _Mezcla, duracion_s: float, cambios_s: list[float]) -> None:
-    c = _Compas(100, swing=0.56)
-    intro = [(a, []) for a, _ in TALLER_A[:2]]
-    for i, (acordes, melodia) in enumerate(_bucle(intro, [TALLER_A, TALLER_A, TALLER_B, TALLER_A])):
-        t0 = i * c.largo
-        if t0 >= duracion_s:
-            break
-        por_acorde = 4 // len(acordes)
-        for j, nombre in enumerate(acordes):
-            raiz, ints = TALLER_ACORDES[nombre]
-            ta = t0 + j * por_acorde * c.negra
-            # Fagot: fundamental, quinta, octava y una nota de paso cromática hacia el siguiente acorde.
-            bajo = raiz - 12 if raiz >= 46 else raiz
-            linea = [bajo, bajo + 7, bajo + 12, bajo + 6] if por_acorde == 4 else [bajo, bajo + 7]
-            for b, nota in enumerate(linea):
-                m.poner(ta + b * c.negra, _lengueta(_hz(nota), c.negra * 0.75, FAGOT, ataque=0.015, caida=2.5), 0.12, -0.15)
-                # El contrabajo en pizzicato dobla al fagot una octava abajo: el suelo de la canción.
-                m.poner(ta + b * c.negra, _cuerda(_hz(nota - 12), 0.7, 0.0, 70 + i * 5 + b, 0.994), 0.22, 0)
-            # Acordeón: el acorde sostenido en la parte fuerte y un golpe corto de fuelle en el contratiempo.
-            voz = [raiz + x + 12 if raiz + x < 58 else raiz + x for x in ints]
-            for q, nota in enumerate(voz):
-                m.poner(ta, _lengueta(_hz(nota), c.negra * min(por_acorde, 2) * 0.9, ACORDEON, ataque=0.04,
-                                      desafine=0.0022, caida=0.9), 0.022, -0.45 + 0.2 * q)
-                if por_acorde == 4:
-                    m.poner(ta + 2 * c.negra + c.swing * c.negra, _lengueta(_hz(nota), c.corchea * 0.8, ACORDEON,
-                            ataque=0.02, desafine=0.0022, caida=3), 0.016, -0.45 + 0.2 * q)
-            # Pizzicato a contratiempo, en la tercera del acorde.
-            for b in (1, 3)[: por_acorde // 2]:
-                m.poner(ta + b * c.negra, _cuerda(_hz(raiz + ints[1] + 12), 0.5, 0.15, 30 + i * 7 + b), 0.045, 0.45)
-        for k, nota, largo in melodia:
-            ini = t0 + c.corchea_s(k)
-            # Una apoyatura de abajo en las notas largas que caen en parte fuerte: el adorno del clarinete.
-            if largo >= 2 and k % 2 == 0 and ini > 0.06:
-                m.poner(ini - 0.055, _lengueta(_hz(nota - 1), 0.05, CLARINETE, ataque=0.008, caida=3), 0.045, 0.1)
-            m.poner(ini, _lengueta(_hz(nota), largo * c.corchea * 0.95, CLARINETE, ataque=0.025, vibrato=0.006,
-                                   caida=0.5), 0.085, 0.1)
-        # El glockenspiel contesta en el último tiempo de cada frase de dos compases.
-        if melodia and i % 2 == 1:
-            nota = melodia[-1][1]
-            for d, salto in enumerate((0, 7, 12)):
-                m.poner(t0 + 3 * c.negra + d * c.corchea / 2, _vibrafono(_hz(nota + 12 + salto), 0.12), 0.03, 0.35)
-        # Caja china en 2 y 4.
-        for b in (1, 3):
-            m.poner(t0 + b * c.negra, _caja_china(i * 4 + b), 0.035, -0.35)
-    for t in cambios_s:
-        if 0 < t < duracion_s - 1:
-            for d, nota in enumerate((80, 84, 87, 92)):
-                m.poner(t + d * 0.05, _vibrafono(_hz(nota + 12), 0.15), 0.028 - 0.004 * d, 0.3)
-    m.sala(((0.029, 0.2), (0.053, 0.15), (0.087, 0.11), (0.139, 0.07), (0.21, 0.04)))
-    _filtrar(m, 4200)
-
-
-# ---------------------------------------------------------------- cuento
-
-# Un cuento con un rey de los espíritus: Do menor a 117 bpm, una caja de música en corcheas que da vueltas
-# sobre el acorde, arpa en negras, cuerdas graves que sostienen la nota pedal dos compases, una flauta
-# que entra a la segunda vuelta y campanas en cada cambio de escena. Todo apagado, como de noche.
-CUENTO_ACORDES = {
-    "Cm": (48, (0, 3, 7)), "Ab": (44, (0, 4, 7)), "Fm": (41, (0, 3, 7)), "G7": (43, (0, 4, 7, 10)),
-    "Eb": (51, (0, 4, 7)), "G": (43, (0, 4, 7)), "Bb": (46, (0, 4, 7)),
-}
-CUENTO_FORMA = ["Cm", "Cm", "Ab", "Ab", "Fm", "Fm", "G7", "G7", "Cm", "Cm", "Eb", "Bb", "Fm", "Ab", "G", "G"]
-CUENTO_FLAUTA = [
-    [(0, 75, 6), (6, 74, 2)], [(0, 72, 8)], [(0, 72, 4), (4, 75, 4)], [(0, 80, 6), (6, 79, 2)],
-    [(0, 77, 4), (4, 80, 4)], [(0, 84, 6), (6, 82, 2)], [(0, 83, 4), (4, 79, 4)], [(0, 77, 4), (4, 74, 4)],
-    [(0, 75, 3), (3, 74, 1), (4, 72, 4)], [(0, 67, 8)], [(0, 70, 4), (4, 75, 4)], [(0, 74, 6), (6, 77, 2)],
-    [(0, 77, 4), (4, 80, 4)], [(0, 84, 4), (4, 82, 2), (6, 80, 2)], [(0, 79, 8)], [(0, 74, 4), (4, 71, 4)],
-]
-
-
-def _cuento(m: _Mezcla, duracion_s: float, cambios_s: list[float]) -> None:
-    c = _Compas(117)
-    i = 0
-    while i * c.largo < duracion_s:
-        t0 = i * c.largo
-        vuelta, k = divmod(i - 4, len(CUENTO_FORMA)) if i >= 4 else (-1, i)
-        raiz, ints = CUENTO_ACORDES[CUENTO_FORMA[k]]
-        # Caja de música: fundamental, quinta, tercera, quinta, octava… dando vueltas en el registro medio.
-        arriba = raiz + 12 if raiz < 48 else raiz
-        giro = [0, 7, ints[1] + 12, 7, 12, 7, ints[1], 7] if k % 2 == 0 else [12, ints[1] + 12, 7, ints[1], 0, 7, 12, 19]
-        for q, s in enumerate(giro):
-            m.poner(t0 + q * c.corchea, _caja_musica(_hz(arriba + s)), 0.085 * (1.0 if q % 2 == 0 else 0.75),
-                    0.3 - 0.08 * (q % 4))
-        # Arpa en negras, en el registro medio.
-        for b, s in enumerate((0, 7, 12, ints[1] + 12)):
-            m.poner(t0 + b * c.negra, _cuerda(_hz(raiz + s), 1.4, 0.7, 50 + 4 * i + b, 0.9985), 0.06, -0.35)
-        # Nota pedal de las cuerdas graves: entra al principio de cada pareja de compases.
-        if k % 2 == 0:
-            m.poner(t0, _lengueta(_hz(raiz - 12), 2 * c.largo, CUERDAS, ataque=0.45, desafine=0.003, caida=0.05), 0.03)
-            m.poner(t0, _lengueta(_hz(raiz), 2 * c.largo, CUERDAS, ataque=0.6, desafine=0.004, caida=0.08), 0.011, -0.2)
-        # La flauta canta en las vueltas impares; en las pares, la caja de música va sola.
-        if vuelta >= 0 and vuelta % 2 == 0:
-            for kk, nota, largo in CUENTO_FLAUTA[k]:
-                m.poner(t0 + kk * c.corchea, _lengueta(_hz(nota), largo * c.corchea * 0.95, FLAUTA, ataque=0.07,
-                                                       vibrato=0.007, caida=0.2), 0.07, 0.1)
-        i += 1
-    for t in [0.0, *cambios_s]:
-        if 0 <= t < duracion_s - 1:
-            m.poner(t, _campana(_hz(84)), 0.03, -0.25)
-            m.poner(t + 0.11, _campana(_hz(91)), 0.02, 0.3)
-    m.sala(((0.047, 0.24), (0.083, 0.2), (0.131, 0.15), (0.211, 0.11), (0.337, 0.07), (0.53, 0.04)))
-    _filtrar(m, 2600)
-
-
-def generar(destino: Path, duracion_s: float, cambios_s: list[float], estilo: str = ESTILOS[0]) -> Path:
-    """cambios_s: cuándo empieza cada escena después de la primera (destello en «consola», acorde nuevo en
-    «ambiente»)."""
+def generar(destino: Path, duracion_s: float, cambios_s: list[float], estilo: str = ESTILOS[0],
+            ffmpeg: str = "ffmpeg") -> Path:
+    """cambios_s: cuándo empieza cada escena después de la primera. Los estilos de la orquesta necesitan ffmpeg
+    para leer sus muestras."""
     if estilo not in ESTILOS:
         raise ValueError(f"estilo de música desconocido: {estilo} (hay {', '.join(ESTILOS)})")
     n = int(duracion_s * SR)
-    m = _Mezcla(n)
-    {"taller": _taller, "cuento": _cuento, "consola": _consola, "noticiario": _noticiario,
-     "ambiente": _ambiente}[estilo](m, duracion_s, cambios_s)
-    final = _env(n, 0.0, 0.0, 3.5)
-    entrada = min(int(0.8 * SR), n)
-    final[:entrada] *= np.linspace(0, 1, entrada)
-    estereo = np.stack([m.izq * final, m.der * final], axis=1)
-    estereo *= 0.55 / max(1e-9, np.abs(estereo).max())
+    if estilo in ORQUESTA:
+        from .orquesta import piezas
+        o = getattr(piezas, estilo)(duracion_s, cambios_s, ffmpeg)
+        izq, der = o.izq[:n], o.der[:n]
+    else:
+        m = _Mezcla(n)
+        {"consola": _consola, "noticiario": _noticiario, "ambiente": _ambiente}[estilo](m, duracion_s, cambios_s)
+        izq, der = m.izq, m.der
+    return _escribir(destino, izq, der)
+
+
+def _escribir(destino: Path, izq: np.ndarray, der: np.ndarray, normalizar: bool = True,
+              fundido: bool = True) -> Path:
+    n = len(izq)
+    final = np.ones(n)
+    if fundido:
+        final = _env(n, 0.0, 0.0, 3.5)
+        entrada = min(int(0.8 * SR), n)
+        final[:entrada] *= np.linspace(0, 1, entrada)
+    estereo = np.stack([izq * final, der * final], axis=1)
+    if normalizar:
+        estereo *= 0.55 / max(1e-9, np.abs(estereo).max())
     destino.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(destino), "wb") as w:
         w.setnchannels(2)
         w.setsampwidth(2)
         w.setframerate(SR)
-        w.writeframes((estereo * 32767).astype("<i2").tobytes())
+        w.writeframes((np.clip(estereo, -1, 1) * 32767).astype("<i2").tobytes())
     return destino
+
+
+# ---------------------------------------------------------------- pistas propias, ajustadas por compases
+
+EXTENSIONES = (".mp3", ".wav", ".ogg", ".flac", ".m4a")
+
+
+def carpeta_pistas() -> Path:
+    """Donde viven las pistas propias que se eligen por nombre (junto a settings.json)."""
+    from . import ajustes
+    return ajustes.ruta().parent / "pistas"
+
+
+def pistas() -> dict[str, Path]:
+    """Las pistas propias instaladas: nombre (el del fichero, sin extensión) -> fichero."""
+    carpeta = carpeta_pistas()
+    if not carpeta.is_dir():
+        return {}
+    return {f.stem: f for f in sorted(carpeta.iterdir()) if f.suffix.lower() in EXTENSIONES}
+
+
+def _pulso(x: np.ndarray) -> tuple[float, float]:
+    """(segundos por negra, primer tiempo fuerte) de una mezcla mono: autocorrelación de la envolvente de ataques
+    entre 70 y 180 bpm, y el uno donde más pesa el grave."""
+    salto = 512
+    tramas = len(x) // salto
+    energia = np.sqrt(np.add.reduceat(x[: tramas * salto] ** 2, np.arange(0, tramas * salto, salto)) / salto)
+    ataques = np.maximum(0, np.diff(np.log(energia + 1e-6), prepend=0))
+    ataques -= ataques.mean()
+    fps = SR / salto
+    ac = np.fft.irfft(np.abs(np.fft.rfft(ataques, 2 * len(ataques))) ** 2)[: len(ataques)]
+    lags = np.arange(int(fps * 60 / 180), int(fps * 60 / 70))
+    # Entre el tempo y sus parientes (3:2, 2:1) gana el más habitual: una campana alrededor de 115 bpm.
+    preferencia = np.exp(-0.5 * (np.log2(60 * fps / lags / 115) / 0.35) ** 2)
+    negra = lags[np.argmax(ac[lags] * preferencia)] / fps
+    paso = negra * fps
+
+    def peso(f0: float) -> float:
+        idx = (f0 + np.arange(0, len(ataques) - f0, 4 * paso)).astype(int)
+        return ataques[idx[idx < len(ataques)]].sum()
+
+    return float(negra), float(max(range(int(4 * paso)), key=peso) / fps)
+
+
+def _rejilla(fichero: Path, mono: np.ndarray) -> tuple[float, float]:
+    """La rejilla de la pista: de <pista>.json si está ({"negra": s, "uno": s}), si no, medida."""
+    meta = fichero.with_suffix(".json")
+    if meta.is_file():
+        import json
+        d = json.loads(meta.read_text(encoding="utf-8"))
+        return float(d["negra"]), float(d["uno"])
+    return _pulso(mono)
+
+
+def _huellas(mono: np.ndarray, uno: int, compas: float, compases: int) -> tuple[np.ndarray, np.ndarray]:
+    """Por compás: su croma (12 clases de altura, normalizado) y su volumen, para saber qué compases se parecen."""
+    cromas, vol = [], []
+    for b in range(compases):
+        a = uno + int(round(b * compas))
+        seg = mono[a:a + int(compas)]
+        esp = np.abs(np.fft.rfft(seg * np.hanning(len(seg))))
+        f = np.fft.rfftfreq(len(seg), 1 / SR)
+        util = (f > 60) & (f < 5000)
+        clase = np.round(12 * np.log2(f[util] / 440.0)).astype(int) % 12
+        c = np.bincount(clase, weights=esp[util] ** 2, minlength=12)
+        cromas.append(c / (np.linalg.norm(c) + 1e-9))
+        vol.append(np.sqrt((seg ** 2).mean()) + 1e-6)
+    return np.array(cromas), np.log(np.array(vol))
+
+
+def _secuencia(compases: int, objetivo: int, croma: np.ndarray, vol: np.ndarray) -> list[int]:
+    """Qué compases suenan, en orden, para durar `objetivo` compases: un salto hacia delante para acortar, o un
+    bucle hacia atrás (repetido) para alargar. Se salta de un compás a otro que suena como el que tocaría."""
+    def d(a: int, b: int) -> float:
+        if not (0 <= a < compases and 0 <= b < compases):
+            return 9.0
+        return float(1 - croma[a] @ croma[b] + 0.5 * abs(vol[a] - vol[b]))
+
+    def salto(i: int, j: int) -> float:   # tras el compás i-1 suena el j en vez del i
+        # Saltar conservando el sitio dentro de la frase de cuatro compases (la pista puede tener un compás suelto
+        # al principio, así que cuenta la distancia, no el número de compás).
+        return d(i, j) + d(i - 1, j - 1) + (0 if (j - i) % 4 == 0 else 1.0)
+
+    orden = list(range(compases))
+    if objetivo >= compases:
+        # Alargar: el bucle [y, x] que mejor empalma (x+1 ≈ y), de 8 a 32 compases, lejos del principio y del final.
+        falta = objetivo - compases
+        if falta == 0:
+            return orden
+        opciones = [(salto(x + 1, y) + (0 if (x - y + 1) % 8 == 0 else 0.3) + (0.25 if x - y + 1 < 16 else 0), y, x)
+                    for x in range(8, compases - 4) for y in range(4, x - 6) if 8 <= x - y + 1 <= 32]
+        if not opciones:
+            return (orden * (objetivo // compases + 1))[:objetivo]
+        _c, y, x = min(opciones)
+        largo = x - y + 1
+        vueltas = -(-falta // largo)
+        orden = list(range(x + 1)) + list(range(y, x + 1)) * vueltas + list(range(x + 1, compases))
+    # Acortar (o quitar lo que sobra de la última vuelta): un salto hacia delante, ni en los 4 primeros ni en los
+    # 4 últimos compases, que conservan la entrada y el final de verdad.
+    sobra = len(orden) - objetivo
+    sobra += (-sobra) % 4   # frases enteras: puede quedar hasta tres compases corta (ajustar_pista la estira)
+    if sobra > 0:
+        opciones = [(salto(orden[p], orden[p + sobra]), p) for p in range(4, len(orden) - sobra - 4)]
+        if opciones:
+            _c, p = min(opciones)
+            orden = orden[:p] + orden[p + sobra:]
+        else:
+            orden = orden[:objetivo]
+    return orden
+
+
+def _estirar(x: np.ndarray, tempo: float, ffmpeg: str) -> np.ndarray:
+    """La misma música más lenta (tempo < 1) sin cambiar el tono: atempo de ffmpeg."""
+    crudo = (np.clip(x, -1, 1) * 32767).astype("<i2").tobytes()
+    salida = subprocess.run([ffmpeg, "-nostdin", "-v", "error", "-f", "s16le", "-ac", "2", "-ar", str(SR), "-i", "-",
+                             "-af", f"atempo={tempo:.5f}", "-f", "s16le", "-ac", "2", "-ar", str(SR), "-"],
+                            input=crudo, capture_output=True, check=True).stdout
+    return np.frombuffer(salida, "<i2").astype(np.float32).reshape(-1, 2) / 32768
+
+
+def ajustar_pista(fichero: Path, destino: Path, duracion_s: float, cambios_s: list[float],
+                  ffmpeg: str = "ffmpeg") -> Path:
+    """Una pista propia a la medida del vídeo, por compases enteros: si el vídeo es más corto, se salta un trozo del
+    medio y la canción llega a su final de verdad; si es más largo, se repite en bucle un trozo del cuerpo. Los
+    empalmes van en el uno de un compás, entre compases que se parecen, con un fundido de 40 ms. En cada cambio de
+    escena suena un triángulo en el pulso más cercano."""
+    crudo = subprocess.run([ffmpeg, "-nostdin", "-v", "error", "-i", str(fichero), "-f", "s16le", "-ac", "2",
+                            "-ar", str(SR), "-"], capture_output=True, check=True).stdout
+    x = np.frombuffer(crudo, "<i2").astype(np.float32).reshape(-1, 2) / 32768
+    if not len(x):
+        raise ValueError(f"no hay audio en {fichero}")
+    n = int(duracion_s * SR)
+    mono = x.mean(axis=1)
+    negra, uno_s = _rejilla(fichero, mono)
+    compas, uno = 4 * negra * SR, int(uno_s * SR)
+    total = int((len(x) - uno) // compas)
+    cola = x[uno + int(round(total * compas)):]
+    objetivo = max(4, int((n - uno - len(cola)) // compas))
+    croma, vol = _huellas(mono, uno, compas, total)
+    orden = _secuencia(total, objetivo, croma, vol)
+    xf = int(0.04 * SR)
+    trozos, previo = [x[:uno]], None
+    for b in orden:
+        a = uno + int(round(b * compas))
+        seg = x[a:uno + int(round((b + 1) * compas))].copy()
+        if previo is not None and b != previo + 1 and len(trozos[-1]) > xf:
+            # Empalme: lo que sonaba se apaga mientras entra el compás nuevo (con su principio de verdad).
+            k = np.linspace(0, 1, xf)[:, None]
+            seguia = x[uno + int(round((previo + 1) * compas)):][:xf]
+            seg[:len(seguia)] = seg[:len(seguia)] * k[:len(seguia)] + seguia * (1 - k[:len(seguia)])
+        trozos.append(seg)
+        previo = b
+    trozos.append(cola)
+    salida = np.concatenate(trozos)
+    # Si quedó algo corta (frases enteras), se estira hasta un 6 % sin cambiar el tono, para acabar con el vídeo.
+    if n * 0.94 <= len(salida) < n:
+        salida = _estirar(salida, len(salida) / n, ffmpeg)
+    corta = len(salida) > n   # solo si el vídeo es más corto que cuatro compases y la entrada
+    if len(salida) < n:
+        salida = np.concatenate([salida, np.zeros((n - len(salida), 2), np.float32)])
+    salida = salida[:n]
+    izq, der = salida[:, 0].astype(np.float64), salida[:, 1].astype(np.float64)
+    try:
+        from .orquesta import golpe
+        triangulo = golpe("triangulo", ffmpeg)
+        for t in cambios_s:
+            pulso = uno_s + round((t - uno_s) / negra) * negra
+            a = int(pulso * SR)
+            if 0 < a < n - SR:
+                trozo = triangulo[: n - a] * 0.1
+                izq[a:a + len(trozo)] += trozo
+                der[a:a + len(trozo)] += trozo
+    except (OSError, KeyError, subprocess.CalledProcessError):
+        pass   # sin el banco, la pista va sin triángulos
+    # Sin fundido propio: la pista ya termina como termina; solo se suaviza si el vídeo corta antes.
+    return _escribir(destino, izq, der, normalizar=False, fundido=corta)
