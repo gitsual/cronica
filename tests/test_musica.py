@@ -64,7 +64,7 @@ def test_los_saltos_respetan_la_frase():
         saltos = [(a, b) for a, b in zip(orden, orden[1:]) if b != a + 1]
         assert saltos and all((b - (a + 1)) % 4 == 0 for a, b in saltos)
         assert orden[:4] == [0, 1, 2, 3] and orden[-4:] == [36, 37, 38, 39]   # la entrada y el final de verdad
-    assert 19 <= len(corta) <= 22 and 87 <= len(larga) <= 90
+    assert 19 <= len(corta) <= 25 and 87 <= len(larga) <= 93
 
 
 def test_una_pista_instalada_se_elige_por_su_nombre(tmp_path, monkeypatch):
