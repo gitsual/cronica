@@ -13,7 +13,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <p><strong>Give it the folder of a project with an interface.<br>It hands back the film of how that interface grew: one front page per pull request.</strong></p>
 
 <p>
-  <img alt="version 0.4.0" src="https://img.shields.io/badge/version-0.4.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="version 0.5.0" src="https://img.shields.io/badge/version-0.5.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="49 tests" src="https://img.shields.io/badge/tests-49-191612?style=for-the-badge&labelColor=191612&color=5A5247">
@@ -459,9 +459,9 @@ through corepack).
 
 ## Verification
 
-| Suite | Command | Result for 0.4.0 |
+| Suite | Command | Result for 0.5.0 |
 |---|---|---|
-| Unit and end to end | `python -m pytest -q` | 49 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, and the settings window against a fake model server |
+| Unit and end to end | `python -m pytest -q` | 59 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, the five music styles, and the settings window against a fake model server |
 | The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
 | The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 
