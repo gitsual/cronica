@@ -13,7 +13,7 @@ This one is written by your git history, and the photographs are taken by a brow
 <p><strong>Give it the folder of a project with an interface.<br>It hands back the film of how that interface grew: one front page per pull request.</strong></p>
 
 <p>
-  <img alt="version 0.6.0" src="https://img.shields.io/badge/version-0.6.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
+  <img alt="version 0.7.0" src="https://img.shields.io/badge/version-0.7.0-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="Windows, Linux" src="https://img.shields.io/badge/windows%20%C2%B7%20linux-191612?style=for-the-badge&labelColor=191612&color=5A5247">
   <img alt="English, Spanish" src="https://img.shields.io/badge/english%20%C2%B7%20espa%C3%B1ol-191612?style=for-the-badge&labelColor=191612&color=B3301C">
   <img alt="49 tests" src="https://img.shields.io/badge/tests-49-191612?style=for-the-badge&labelColor=191612&color=5A5247">
@@ -291,7 +291,13 @@ jumping between two bars that sound alike and keep their place in the four-bar p
 stretch of 16 to 32 bars in a loop until the ending is due. What is left over (at most three bars) is absorbed by
 playing the whole track up to 6 % slower, pitch unchanged. Each scene change gets a triangle on the nearest beat.
 Tracks dropped in the `pistas` folder next to the settings (`%APPDATA%\cronica\pistas` on Windows) appear by
-name in the newsroom and work as `--music "Name"`. Mind the rights of what you put there.
+name in the newsroom and work as `--music "Name"`. Mind the rights of what you put there. With more than one, `--music random`
+(or *Any of your tracks* in the newsroom) picks a different one for each film.
+
+Two commands work on tracks outside a film: `python -m cronica.musica preparar track.mp3` measures it and writes
+`track.json` (beat grid and the best loop, in seconds, which Tramoya also uses to repeat a track without a seam);
+`python -m cronica.musica ajustar track.mp3|"Name"|random 354 out.wav 30,90,180` fits it to 354 seconds with
+accents at those times, for a video made elsewhere.
 ---
 
 <a id="the-newsroom-settings"></a>
@@ -473,9 +479,9 @@ through corepack).
 
 ## Verification
 
-| Suite | Command | Result for 0.6.0 |
+| Suite | Command | Result for 0.7.0 |
 |---|---|---|
-| Unit and end to end | `python -m pytest -q` | 67 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, every music style (the orchestra included), a track of your own fitted bar by bar, and the settings window against a fake model server |
+| Unit and end to end | `python -m pytest -q` | 69 passed on Windows 11, including a real repository built, photographed and recorded in Chromium, both languages, the duration fit and the vertical canvas, every music style (the orchestra included), a track of your own fitted bar by bar, and the settings window against a fake model server |
 | The example | `python examples/garden/construir.py garden` then `cronica garden` | the films in [`assets/video/`](assets/video): 9 issues of 10 milestones, 41 s, in English, in the classic look and in Spanish |
 | The images of this page | [`assets/readme/construir.py`](assets/readme/construir.py) | drawn from that run: the chart from its git figures, the console from its log, the proofs from `--preview` |
 

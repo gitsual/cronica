@@ -80,3 +80,22 @@ def test_la_orquesta_toca_cada_pieza(tmp_path):
         with wave.open(str(wav)) as w:
             x = np.frombuffer(w.readframes(w.getnframes()), "<i2") / 32767
         assert 0.02 < np.sqrt((x ** 2).mean())
+
+
+def test_aleatoria_elige_una_pista_instalada(tmp_path, monkeypatch):
+    monkeypatch.setattr(musica, "carpeta_pistas", lambda: tmp_path)
+    assert musica.elegir("aleatoria") in musica.ORQUESTA        # sin pistas, la orquesta
+    for nombre in ("A", "B"):
+        _pista(tmp_path / f"{nombre}.wav")
+    elegidas = {musica.elegir("aleatoria", semilla=s) for s in range(20)}
+    assert elegidas == {str(tmp_path / "A.wav"), str(tmp_path / "B.wav")}
+    assert musica.elegir("vals") == "vals"
+    assert _argumentos([str(tmp_path), "--music", "aleatoria"]).musica in elegidas
+
+
+def test_preparar_deja_la_rejilla_y_el_bucle(tmp_path):
+    pista = _pista(tmp_path / "bossa.wav", segundos=60)
+    meta = musica.preparar_pista(pista)
+    assert meta["negra"] == 0.5 and meta["uno"] == 0.0
+    ini, fin = meta["bucle"]
+    assert 0 < ini < fin <= 60 and round((fin - ini) / 2) % 4 == 0   # compases enteros, frases de cuatro

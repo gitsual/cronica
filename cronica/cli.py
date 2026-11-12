@@ -160,6 +160,7 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
         ap.error(_("--format vertical: de momento solo con la estética newspaper"))
     if args.duracion < 0:
         ap.error(_("--duration: los segundos no pueden ser negativos"))
+    args.musica = musica.elegir(args.musica) if args.musica in (musica.ALEATORIA, "random") else args.musica
     if args.musica in musica.pistas():
         args.musica = str(musica.pistas()[args.musica])
     if args.musica not in musica.ESTILOS and not Path(args.musica).is_file():

@@ -381,6 +381,19 @@ def carpeta_pistas() -> Path:
     return ajustes.ruta().parent / "pistas"
 
 
+ALEATORIA = "aleatoria"
+
+
+def elegir(eleccion: str, semilla: int | None = None) -> str:
+    """«aleatoria»: una de las pistas instaladas al azar (si no hay ninguna, un estilo de la orquesta). Lo demás,
+    tal cual."""
+    if eleccion != ALEATORIA:
+        return eleccion
+    import random
+    opciones = [str(f) for f in pistas().values()] or list(ORQUESTA)
+    return random.Random(semilla).choice(opciones)
+
+
 def pistas() -> dict[str, Path]:
     """Las pistas propias instaladas: nombre (el del fichero, sin extensión) -> fichero."""
     carpeta = carpeta_pistas()
@@ -436,6 +449,39 @@ def _huellas(mono: np.ndarray, uno: int, compas: float, compases: int) -> tuple[
         cromas.append(c / (np.linalg.norm(c) + 1e-9))
         vol.append(np.sqrt((seg ** 2).mean()) + 1e-6)
     return np.array(cromas), np.log(np.array(vol))
+
+
+def _analizar(fichero: Path, ffmpeg: str = "ffmpeg") -> tuple[np.ndarray, float, float, np.ndarray, np.ndarray]:
+    """(estéreo, negra, uno, croma por compás, volumen por compás) de una pista."""
+    crudo = subprocess.run([ffmpeg, "-nostdin", "-v", "error", "-i", str(fichero), "-f", "s16le", "-ac", "2",
+                            "-ar", str(SR), "-"], capture_output=True, check=True).stdout
+    x = np.frombuffer(crudo, "<i2").astype(np.float32).reshape(-1, 2) / 32768
+    if not len(x):
+        raise ValueError(f"no hay audio en {fichero}")
+    mono = x.mean(axis=1)
+    negra, uno_s = _rejilla(fichero, mono)
+    compas = 4 * negra * SR
+    total = int((len(x) - int(uno_s * SR)) // compas)
+    croma, vol = _huellas(mono, int(uno_s * SR), compas, total)
+    return x, negra, uno_s, croma, vol
+
+
+def preparar_pista(fichero: Path, ffmpeg: str = "ffmpeg") -> dict:
+    """Mide la pista y deja <pista>.json al lado: la rejilla (negra, uno) y el mejor bucle (en segundos), que
+    también usa Tramoya para repetirla sin costura. Si el .json ya trae la rejilla, se respeta."""
+    import json
+    x, negra, uno_s, croma, vol = _analizar(fichero, ffmpeg)
+    total = len(croma)
+    orden = _secuencia(total, total * 3, croma, vol)
+    atras = next(((a, b) for a, b in zip(orden, orden[1:]) if b < a), None)
+    meta_f = fichero.with_suffix(".json")
+    meta = json.loads(meta_f.read_text(encoding="utf-8")) if meta_f.is_file() else {}
+    meta.update(negra=round(negra, 6), uno=round(uno_s, 4))
+    if atras:
+        x_fin, y_ini = atras
+        meta["bucle"] = [round(uno_s + y_ini * 4 * negra, 4), round(uno_s + (x_fin + 1) * 4 * negra, 4)]
+    meta_f.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+    return meta
 
 
 def _secuencia(compases: int, objetivo: int, croma: np.ndarray, vol: np.ndarray) -> list[int]:
@@ -544,3 +590,30 @@ def ajustar_pista(fichero: Path, destino: Path, duracion_s: float, cambios_s: li
         pass   # sin el banco, la pista va sin triángulos
     # Sin fundido propio: la pista ya termina como termina; solo se suaviza si el vídeo corta antes.
     return _escribir(destino, izq, der, normalizar=False, fundido=corta)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """python -m cronica.musica preparar <pista>...
+    python -m cronica.musica ajustar <pista|nombre|aleatoria> <segundos> <salida.wav> [cambio,cambio,…]"""
+    import sys
+    a = sys.argv[1:] if argv is None else argv
+    if a[:1] == ["preparar"] and len(a) > 1:
+        for f in a[1:]:
+            print(f, preparar_pista(Path(f)))
+        return 0
+    if a[:1] == ["ajustar"] and len(a) >= 4:
+        eleccion = elegir(a[1])
+        fichero = pistas().get(eleccion) or Path(eleccion)
+        cambios = [float(c) for c in a[4].split(",")] if len(a) > 4 and a[4] else []
+        if eleccion in ESTILOS:
+            generar(Path(a[3]), float(a[2]), cambios, eleccion)
+        else:
+            ajustar_pista(fichero, Path(a[3]), float(a[2]), cambios)
+        print(f"{Path(a[3])} · {Path(str(fichero)).stem}")
+        return 0
+    print(main.__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

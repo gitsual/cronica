@@ -55,7 +55,7 @@ def _limpiar(d: dict) -> dict:
     for k in ("url", "model", "key"):
         if isinstance(ai.get(k), str):
             salida["ai"][k] = ai[k].strip()
-    if d.get("music") in musica.ESTILOS or d.get("music") in musica.pistas() or (
+    if d.get("music") in musica.ESTILOS or d.get("music") in musica.pistas() or d.get("music") == musica.ALEATORIA or (
             isinstance(d.get("music"), str) and Path(d["music"]).is_file()):
         salida["music"] = d["music"]
     if d.get("look") in montaje.ESTETICAS or (isinstance(d.get("look"), str) and Path(d["look"]).is_file()):
