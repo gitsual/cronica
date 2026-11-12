@@ -484,9 +484,12 @@ def preparar_pista(fichero: Path, ffmpeg: str = "ffmpeg") -> dict:
     return meta
 
 
-def _secuencia(compases: int, objetivo: int, croma: np.ndarray, vol: np.ndarray) -> list[int]:
+def _secuencia(compases: int, objetivo: int, croma: np.ndarray, vol: np.ndarray,
+               redondeo: str = "arriba") -> list[int]:
     """Qué compases suenan, en orden, para durar `objetivo` compases: un salto hacia delante para acortar, o un
-    bucle hacia atrás (repetido) para alargar. Se salta de un compás a otro que suena como el que tocaría."""
+    bucle hacia atrás (repetido) para alargar. Se salta de un compás a otro que suena como el que tocaría.
+    `redondeo`: lo que se quita va en frases enteras de cuatro compases, redondeando «arriba» (queda hasta tres
+    compases corta) o «abajo» (hasta tres larga); «exacto» quita justo lo que sobra aunque parta la frase."""
     def d(a: int, b: int) -> float:
         if not (0 <= a < compases and 0 <= b < compases):
             return 9.0
@@ -514,7 +517,10 @@ def _secuencia(compases: int, objetivo: int, croma: np.ndarray, vol: np.ndarray)
     # Acortar (o quitar lo que sobra de la última vuelta): un salto hacia delante, ni en los 4 primeros ni en los
     # 4 últimos compases, que conservan la entrada y el final de verdad.
     sobra = len(orden) - objetivo
-    sobra += (-sobra) % 4   # frases enteras: puede quedar hasta tres compases corta (ajustar_pista la estira)
+    if redondeo == "arriba":
+        sobra += (-sobra) % 4
+    elif redondeo == "abajo":
+        sobra -= sobra % 4
     if sobra > 0:
         opciones = [(salto(orden[p], orden[p + sobra]), p) for p in range(4, len(orden) - sobra - 4)]
         if opciones:
@@ -551,9 +557,14 @@ def ajustar_pista(fichero: Path, destino: Path, duracion_s: float, cambios_s: li
     compas, uno = 4 * negra * SR, int(uno_s * SR)
     total = int((len(x) - uno) // compas)
     cola = x[uno + int(round(total * compas)):]
-    objetivo = max(4, int((n - uno - len(cola)) // compas))
+    objetivo = max(4, round((n - uno - len(cola)) / compas))
     croma, vol = _huellas(mono, uno, compas, total)
-    orden = _secuencia(total, objetivo, croma, vol)
+    # Frases enteras, redondeando hacia donde quede más cerca; si ni así cabe con un 6 % de tempo (vídeos muy
+    # cortos, donde cuatro compases pesan mucho), el compás exacto. Lo que falte o sobre se ajusta con el tempo.
+    largo = lambda o: uno + len(o) * compas + len(cola)
+    orden = min((_secuencia(total, objetivo, croma, vol, r) for r in ("arriba", "abajo")), key=lambda o: abs(largo(o) - n))
+    if abs(largo(orden) - n) > 0.06 * n:
+        orden = _secuencia(total, objetivo, croma, vol, "exacto")
     xf = int(0.04 * SR)
     trozos, previo = [x[:uno]], None
     for b in orden:
@@ -568,10 +579,10 @@ def ajustar_pista(fichero: Path, destino: Path, duracion_s: float, cambios_s: li
         previo = b
     trozos.append(cola)
     salida = np.concatenate(trozos)
-    # Si quedó algo corta (frases enteras), se estira hasta un 6 % sin cambiar el tono, para acabar con el vídeo.
-    if n * 0.94 <= len(salida) < n:
+    # La canción acaba con el vídeo: hasta un 6 % más lenta o más rápida, sin cambiar el tono.
+    if 0.94 * n <= len(salida) <= 1.06 * n and abs(len(salida) - n) > 0.02 * SR:
         salida = _estirar(salida, len(salida) / n, ffmpeg)
-    corta = len(salida) > n   # solo si el vídeo es más corto que cuatro compases y la entrada
+    corta = len(salida) > n + 0.5 * SR   # solo si el vídeo es más corto que la entrada y cuatro compases
     if len(salida) < n:
         salida = np.concatenate([salida, np.zeros((n - len(salida), 2), np.float32)])
     salida = salida[:n]
